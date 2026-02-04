@@ -11,11 +11,63 @@ function DXCCAnalyzer() {
   const [logData, setLogData] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all') // 'all', 'confirmed', 'worked'
+  const [filterMode, setFilterMode] = useState('all') // 'all', 'ssb', 'cw', 'digital'
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15
 
   // Supported bands
   const BANDS = ['40m', '30m', '20m', '17m', '15m', '12m', '10m']
+
+  // Mode categories (HF modes only - VHF/UHF modes like FM, DMR excluded)
+  const MODE_CATEGORIES = {
+    ssb: ['SSB', 'USB', 'LSB', 'AM'],
+    cw: ['CW'],
+    digital: [
+      // WSJT-X Modes
+      'FT8', 'FT4', 'JT65', 'JT9', 'JT4', 'WSPR', 'Q65',
+      // RTTY & PSK
+      'RTTY', 'PSK', 'PSK31', 'PSK63', 'PSK125', 'QPSK', 'BPSK',
+      // Other Digital
+      'MFSK', 'OLIVIA', 'CONTESTIA', 'HELL', 'MT63', 'DOMINO', 'THROB',
+      // Winlink & Data Modes
+      'VARA', 'WINMOR', 'ARDOP', 'PACTOR',
+      // Packet & APRS
+      'PACKET', 'APRS', 'AX25',
+      // Other HF Digital
+      'FSK', 'AFSK'
+    ]
+  }
+
+  /**
+   * Categorize mode into SSB, CW, or Digital
+   * @param {string} mode - Mode from ADIF
+   * @returns {string} Category: 'ssb', 'cw', 'digital', or 'unknown'
+   */
+  const categorizeMode = (mode) => {
+    if (!mode) return 'unknown'
+    const upperMode = mode.toUpperCase().trim()
+
+    // Check digital modes first (more specific)
+    for (const digitalMode of MODE_CATEGORIES.digital) {
+      if (upperMode === digitalMode || upperMode.startsWith(digitalMode + ' ') || upperMode.includes(digitalMode)) {
+        return 'digital'
+      }
+    }
+
+    // Then check CW
+    if (upperMode === 'CW' || upperMode.startsWith('CW ')) {
+      return 'cw'
+    }
+
+    // Finally check SSB modes
+    for (const ssbMode of MODE_CATEGORIES.ssb) {
+      if (upperMode === ssbMode || upperMode.startsWith(ssbMode + ' ')) {
+        return 'ssb'
+      }
+    }
+
+    return 'unknown'
+  }
 
   /**
    * Parse ADIF file content
@@ -71,14 +123,20 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Analyze QSOs and build DXCC matrix
+   * Analyze QSOs and build DXCC matrix (with optional mode filter)
    * @param {Array} qsos - Array of QSO records
+   * @param {string} modeFilter - Optional mode filter: 'all', 'ssb', 'cw', 'digital'
    * @returns {Object} DXCC analysis data
    */
-  const analyzeQSOs = (qsos) => {
+  const analyzeQSOs = (qsos, modeFilter = 'all') => {
     const dxccData = {}
 
-    qsos.forEach(qso => {
+    // Filter QSOs by mode category if specified
+    const filteredQsos = modeFilter === 'all'
+      ? qsos
+      : qsos.filter(qso => categorizeMode(qso.MODE) === modeFilter)
+
+    filteredQsos.forEach(qso => {
       const dxccId = qso.DXCC
       if (!dxccId) return
 
@@ -145,11 +203,9 @@ function DXCCAnalyzer() {
     reader.onload = (e) => {
       const content = e.target.result
       const qsos = parseADIF(content)
-      const analyzed = analyzeQSOs(qsos)
 
       setLogData({
         qsos,
-        dxccData: analyzed,
         totalQSOs: qsos.length
       })
       setCurrentPage(1)
@@ -158,29 +214,38 @@ function DXCCAnalyzer() {
     reader.readAsText(file)
   }
 
+  // Reanalyze data when mode filter changes
+  const analyzedData = useMemo(() => {
+    if (!logData) return null
+    return analyzeQSOs(logData.qsos, filterMode)
+  }, [logData, filterMode])
+
   // Calculate statistics
   const stats = useMemo(() => {
-    if (!logData) return null
+    if (!analyzedData) return null
 
-    const dxccEntries = Object.entries(logData.dxccData)
+    const dxccEntries = Object.entries(analyzedData)
     const worked = dxccEntries.length
     const confirmed = dxccEntries.filter(([_, data]) =>
       BANDS.some(band => data.bands[band] === 'C')
     ).length
 
+    // Calculate total QSOs for current mode filter
+    const totalQSOs = dxccEntries.reduce((sum, [_, data]) => sum + data.total, 0)
+
     return {
-      totalQSOs: logData.totalQSOs,
+      totalQSOs,
       worked,
       confirmed,
       percentage: worked > 0 ? ((confirmed / worked) * 100).toFixed(1) : 0
     }
-  }, [logData])
+  }, [analyzedData])
 
   // Filter and search data
   const filteredData = useMemo(() => {
-    if (!logData) return []
+    if (!analyzedData) return []
 
-    let entries = Object.entries(logData.dxccData)
+    let entries = Object.entries(analyzedData)
 
     // Apply search filter
     if (searchTerm) {
@@ -204,7 +269,7 @@ function DXCCAnalyzer() {
     }
 
     return entries.sort((a, b) => a[1].country.localeCompare(b[1].country))
-  }, [logData, searchTerm, filterStatus])
+  }, [analyzedData, searchTerm, filterStatus])
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
@@ -313,7 +378,7 @@ function DXCCAnalyzer() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setFilterStatus('all')}
                 className={`px-4 py-2 rounded-lg transition ${
@@ -338,6 +403,23 @@ function DXCCAnalyzer() {
               >
                 Worked Only
               </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <select
+                value={filterMode}
+                onChange={(e) => {
+                  setFilterMode(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+              >
+                <option value="all">All Modes</option>
+                <option value="ssb">SSB</option>
+                <option value="cw">CW</option>
+                <option value="digital">Digital</option>
+              </select>
             </div>
 
             <button
