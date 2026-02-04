@@ -2,6 +2,8 @@
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
+**Developed by Fritz (DK9RC)**
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -45,7 +47,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/amateur-radio-dxcc-analyzer-pro.git
+git clone https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro.git
 
 # Navigate to project directory
 cd "Amateur Radio DXCC Analyzer Pro"
@@ -197,6 +199,12 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 MIT License - See LICENSE file for details
 
+## Author
+
+**Fritz Dirschedl (DK9RC)**
+- GitHub: [@DirschedlF](https://github.com/DirschedlF)
+- Repository: [Amateur-Radio-DXCC-Analyzer-Pro](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+
 ## Acknowledgments
 
 - Built for the amateur radio community
@@ -219,6 +227,6 @@ Future enhancements under consideration:
 
 ---
 
-**73 de [Your Callsign]** 📻
+**73 de DK9RC** 📻
 
 *Happy DXing!*
