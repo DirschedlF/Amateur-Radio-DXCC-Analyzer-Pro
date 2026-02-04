@@ -402,29 +402,6 @@ function DXCCAnalyzer() {
                   ))}
                   {/* Print all data */}
                   {filteredData.map(([id, data]) => (
-                    <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition">
-                      <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
-                      <td className="px-4 py-3 text-gray-400">{id}</td>
-                      <td className="px-4 py-3 text-gray-400">{data.cont}</td>
-                      <td className="px-4 py-3 text-center">{data.total}</td>
-                      {BANDS.map(band => (
-                        <td key={band} className="px-4 py-3 text-center">
-                          {data.bands[band] === 'C' && (
-                            <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
-                          )}
-                          {data.bands[band] === 'W' && (
-                            <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-center">{data.lotw && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.eqsl && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qrz && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qsl && '✓'}</td>
-                    </tr>
-                  ))}
-                  {/* Print all data */}
-                  {filteredData.map(([id, data]) => (
                     <tr key={`print-${id}`} className="border-t border-gray-700 print-show">
                       <td className="px-4 py-3 font-medium">{data.country}</td>
                       <td className="px-4 py-3">{id}</td>
