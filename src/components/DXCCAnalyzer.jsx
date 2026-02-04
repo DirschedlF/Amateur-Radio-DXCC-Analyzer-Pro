@@ -378,17 +378,8 @@ function DXCCAnalyzer() {
                 </thead>
                 <tbody>
                   {/* Show paginated data on screen, all data when printing */}
-                  <style>{`
-                    @media print {
-                      .print-hide { display: none !important; }
-                      .print-show { display: table-row !important; }
-                    }
-                    @media screen {
-                      .print-show { display: none; }
-                    }
-                  `}</style>
                   {paginatedData.map(([id, data]) => (
-                    <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition print-hide">
+                    <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition print:hidden">
                       <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
