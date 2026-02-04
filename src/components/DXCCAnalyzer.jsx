@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Upload, Download, Search, Filter } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer } from 'lucide-react'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -242,6 +242,13 @@ function DXCCAnalyzer() {
     URL.revokeObjectURL(url)
   }
 
+  /**
+   * Print report
+   */
+  const handlePrint = () => {
+    window.print()
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
@@ -335,10 +342,18 @@ function DXCCAnalyzer() {
 
             <button
               onClick={exportToCSV}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition flex items-center gap-2"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition flex items-center gap-2 print:hidden"
             >
               <Download className="w-5 h-5" />
               Export CSV
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition flex items-center gap-2 print:hidden"
+            >
+              <Printer className="w-5 h-5" />
+              Print Report
             </button>
           </div>
 
@@ -362,11 +377,67 @@ function DXCCAnalyzer() {
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Show paginated data on screen, all data when printing */}
+                  <style>{`
+                    @media print {
+                      .print-hide { display: none !important; }
+                      .print-show { display: table-row !important; }
+                    }
+                    @media screen {
+                      .print-show { display: none; }
+                    }
+                  `}</style>
                   {paginatedData.map(([id, data]) => (
+                    <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition print-hide">
+                      <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
+                      <td className="px-4 py-3 text-gray-400">{id}</td>
+                      <td className="px-4 py-3 text-gray-400">{data.cont}</td>
+                      <td className="px-4 py-3 text-center">{data.total}</td>
+                      {BANDS.map(band => (
+                        <td key={band} className="px-4 py-3 text-center">
+                          {data.bands[band] === 'C' && (
+                            <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
+                          )}
+                          {data.bands[band] === 'W' && (
+                            <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-center">{data.lotw && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.eqsl && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.qrz && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.qsl && '✓'}</td>
+                    </tr>
+                  ))}
+                  {/* Print all data */}
+                  {filteredData.map(([id, data]) => (
                     <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition">
                       <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
+                      <td className="px-4 py-3 text-center">{data.total}</td>
+                      {BANDS.map(band => (
+                        <td key={band} className="px-4 py-3 text-center">
+                          {data.bands[band] === 'C' && (
+                            <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
+                          )}
+                          {data.bands[band] === 'W' && (
+                            <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-center">{data.lotw && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.eqsl && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.qrz && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{data.qsl && '✓'}</td>
+                    </tr>
+                  ))}
+                  {/* Print all data */}
+                  {filteredData.map(([id, data]) => (
+                    <tr key={`print-${id}`} className="border-t border-gray-700 print-show">
+                      <td className="px-4 py-3 font-medium">{data.country}</td>
+                      <td className="px-4 py-3">{id}</td>
+                      <td className="px-4 py-3">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{data.total}</td>
                       {BANDS.map(band => (
                         <td key={band} className="px-4 py-3 text-center">
@@ -391,7 +462,7 @@ function DXCCAnalyzer() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-6">
+            <div className="flex justify-center items-center gap-2 mt-6 print:hidden">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
@@ -413,7 +484,7 @@ function DXCCAnalyzer() {
           )}
 
           {/* Reset */}
-          <div className="text-center mt-6">
+          <div className="text-center mt-6 print:hidden">
             <button
               onClick={() => setLogData(null)}
               className="text-gray-400 hover:text-white transition underline"
