@@ -34,9 +34,11 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Smart Memoization** - React hooks for performance optimization
 - **Instant Results** - Real-time analysis and visualization
 
-### 📤 Export Capabilities
+### 📤 Export & Print Capabilities
 - **CSV Export** - Download your analysis with current filters applied
-- **Preserved Filters** - Export respects search and status filters
+- **Print Report** - Professional print-friendly reports (A4 landscape)
+- **PDF Generation** - Save reports as PDF via browser print dialog
+- **Preserved Filters** - Export and print respect search and status filters
 
 ## Quick Start
 
@@ -83,9 +85,11 @@ The optimized build will be in the `dist/` directory.
    - Filter by status: All, Confirmed Only, or Worked Only
    - Navigate through pages (15 entries per page)
 
-4. **Export Results**
-   - Click "Export CSV" to download your filtered analysis
-   - Open in Excel, Google Sheets, or any spreadsheet application
+4. **Export & Print Results**
+   - Click "Export CSV" to download your filtered analysis as spreadsheet
+   - Click "Print Report" to generate a professional print-friendly report
+   - Save as PDF using your browser's print dialog
+   - All exports and prints respect your current filters
 
 ## ADIF Field Support
 
@@ -223,7 +227,7 @@ Future enhancements under consideration:
 - [ ] Visual charts and graphs (continent breakdown, band activity)
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
-- [ ] Print-friendly report generation
+- [x] Print-friendly report generation ✅
 
 ---
 
