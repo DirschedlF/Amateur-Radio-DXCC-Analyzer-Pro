@@ -30,6 +30,13 @@ body {
   margin: 0 auto;
 }
 
+/* Screen-only: Hide print rows */
+@media screen {
+  .print-show {
+    display: none !important;
+  }
+}
+
 /* Print Styles */
 @media print {
   @page {
