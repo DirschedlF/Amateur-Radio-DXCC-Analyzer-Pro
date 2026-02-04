@@ -25,6 +25,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Interactive Dashboard** - Real-time statistics (Total QSOs, Worked, Confirmed, %)
 - **Advanced Filtering** - Search by country name or DXCC ID
 - **Status Filters** - View All / Confirmed Only / Worked Only
+- **Mode Filter** - Filter by operating mode (SSB, CW, Digital)
 - **Sticky Headers** - Keep columns visible while scrolling
 - **Responsive Design** - Works on desktop, tablet, and mobile devices
 
@@ -83,6 +84,7 @@ The optimized build will be in the `dist/` directory.
 3. **Explore Your Data**
    - Use the search bar to find specific countries or DXCC entities
    - Filter by status: All, Confirmed Only, or Worked Only
+   - Filter by mode: All Modes, SSB, CW, or Digital
    - Navigate through pages (15 entries per page)
 
 4. **Export & Print Results**
@@ -100,6 +102,7 @@ The optimized build will be in the `dist/` directory.
 ### Optional Fields
 - `COUNTRY` - Country name (used as display name)
 - `CONT` - Continent code
+- `MODE` - Operating mode (for mode filtering)
 - `LOTW_QSL_RCVD` - LOTW confirmation status
 - `EQSL_QSL_RCVD` - eQSL confirmation status
 - `QSL_RCVD` - Paper QSL confirmation status
@@ -112,6 +115,15 @@ A QSO is marked as **Confirmed** if ANY confirmation field contains `Y` or `V`:
 - Paper: `QSL_RCVD = Y`
 - QRZ.com: `QRZCOM_QSL_RCVD = Y` or `V`
 
+### Mode Categorization
+QSOs are automatically categorized by operating mode:
+- **SSB**: USB, LSB, AM
+- **CW**: Morse code (CW)
+- **Digital**: FT8, FT4, VARA HF, RTTY, PSK31, PSK63, JT65, JT9, WINMOR, ARDOP, PACTOR, and other HF digital modes
+- **Unknown**: VHF/UHF modes (FM, DMR) and other modes not categorized above
+
+Mode filtering allows you to analyze DXCC progress separately for each mode category.
+
 ## Log4OM Compatibility
 
 The analyzer includes special handling for **Log4OM** ADIF extensions, particularly for QRZ.com confirmation tracking:
@@ -119,6 +131,42 @@ The analyzer includes special handling for **Log4OM** ADIF extensions, particula
 - `QRZ_QSL_RCVD`
 
 These fields are automatically recognized alongside standard ADIF fields.
+
+## Mode Filter Feature
+
+The **Mode Filter** allows you to analyze your DXCC progress by operating mode. This is useful for:
+- Tracking mode-specific awards (e.g., DXCC Digital, DXCC CW)
+- Comparing your progress across different modes
+- Analyzing which modes work best for DXing
+
+### Supported Modes
+
+#### SSB (Phone)
+- USB (Upper Sideband)
+- LSB (Lower Sideband)
+- AM (Amplitude Modulation)
+
+#### CW (Morse Code)
+- CW (Continuous Wave)
+
+#### Digital Modes
+- **WSJT-X**: FT8, FT4, JT65, JT9, JT4, WSPR, Q65
+- **Winlink**: VARA HF, WINMOR, ARDOP, PACTOR
+- **RTTY/PSK**: RTTY, PSK31, PSK63, PSK125, QPSK, BPSK
+- **Other**: MFSK, OLIVIA, CONTESTIA, HELL, MT63, DOMINO, THROB, FSK, AFSK, PACKET, APRS, AX25
+
+### How It Works
+
+1. Select a mode from the dropdown filter (All Modes, SSB, CW, or Digital)
+2. The analyzer automatically recalculates:
+   - Total QSOs for that mode
+   - DXCC entities worked in that mode
+   - DXCC entities confirmed in that mode
+   - Confirmation percentage for that mode
+3. The band matrix updates to show only Worked/Confirmed status for the selected mode
+4. Export and print functions respect the mode filter
+
+**Note:** VHF/UHF modes like FM and DMR are not included in the mode categories and only appear when "All Modes" is selected.
 
 ## Technology Stack
 
@@ -223,11 +271,12 @@ For questions, issues, or feature requests, please open an issue on GitHub.
 
 Future enhancements under consideration:
 - [ ] Additional band support (6m, 2m, 70cm, etc.)
-- [ ] Mode-specific analysis (SSB, CW, Digital)
 - [ ] Visual charts and graphs (continent breakdown, band activity)
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
+- [ ] Continent-based filtering
 - [x] Print-friendly report generation ✅
+- [x] Mode-specific analysis (SSB, CW, Digital) ✅
 
 ---
 
