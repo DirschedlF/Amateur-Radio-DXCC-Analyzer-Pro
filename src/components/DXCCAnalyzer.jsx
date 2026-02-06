@@ -99,7 +99,12 @@ function DXCCAnalyzer() {
       // Extract all fields from the record
       while ((match = adifTagRegex.exec(record)) !== null) {
         const fieldName = match[1].toUpperCase()
-        const value = match[4].trim()
+        const declaredLength = parseInt(match[2], 10)
+        const rawValue = match[4]
+        // Respect ADIF declared field length to avoid capturing extra data
+        const value = (declaredLength > 0 && rawValue.length > declaredLength)
+          ? rawValue.substring(0, declaredLength).trim()
+          : rawValue.trim()
         qso[fieldName] = value
       }
 
@@ -123,8 +128,9 @@ function DXCCAnalyzer() {
       'QSL_RCVD',
       'QRZCOM_QSL_RCVD',
       'QRZ_QSL_RCVD',
-      'QRZCOM_QSO_DOWNLOAD_STATUS',
-      'QRZCOM_QSO_UPLOAD_STATUS'    // WaveLog uses this for QRZ confirmation
+      'QRZCOM_QSO_DOWNLOAD_STATUS'
+      // Note: QRZCOM_QSO_UPLOAD_STATUS is intentionally excluded - it only means
+      // "uploaded to QRZ" not "confirmed by QRZ". Upload ≠ Confirmation.
     ]
 
     return confirmFields.some(field =>
@@ -196,12 +202,14 @@ function DXCCAnalyzer() {
       dxccData[dxccId].total++
 
       // Track confirmation platforms and count confirmed QSOs per platform
-      const isLotw = qso.LOTW_QSL_RCVD?.toUpperCase() === 'Y'
-      const isEqsl = qso.EQSL_QSL_RCVD?.toUpperCase() === 'Y'
-      const isQsl = qso.QSL_RCVD?.toUpperCase() === 'Y'
-      const isQrz = ['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS', 'QRZCOM_QSO_UPLOAD_STATUS'].some(
+      // ADIF standard: Y = Yes (confirmed), V = Verified (confirmed) - both count as confirmed
+      const isLotw = ['Y', 'V'].includes(qso.LOTW_QSL_RCVD?.toUpperCase())
+      const isEqsl = ['Y', 'V'].includes(qso.EQSL_QSL_RCVD?.toUpperCase())
+      const isQsl = ['Y', 'V'].includes(qso.QSL_RCVD?.toUpperCase())
+      const isQrz = ['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS'].some(
         f => ['Y', 'V'].includes(qso[f]?.toUpperCase())
       )
+      // Note: QRZCOM_QSO_UPLOAD_STATUS is excluded - it means "uploaded to QRZ", not "confirmed"
 
       if (isLotw) { dxccData[dxccId].lotw = true; dxccData[dxccId].platformQsos.lotw++ }
       if (isEqsl) { dxccData[dxccId].eqsl = true; dxccData[dxccId].platformQsos.eqsl++ }
@@ -616,7 +624,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.2</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.3</p>
       </div>
 
       {/* File Upload */}

@@ -147,14 +147,16 @@ The optimized build will be in the `dist/` directory.
 - `LOTW_QSL_RCVD` - LOTW confirmation status
 - `EQSL_QSL_RCVD` - eQSL confirmation status
 - `QSL_RCVD` - Paper QSL confirmation status
-- `QRZCOM_QSL_RCVD` / `QRZ_QSL_RCVD` / `QRZCOM_QSO_DOWNLOAD_STATUS` / `QRZCOM_QSO_UPLOAD_STATUS` - QRZ.com confirmation
+- `QRZCOM_QSL_RCVD` / `QRZ_QSL_RCVD` / `QRZCOM_QSO_DOWNLOAD_STATUS` - QRZ.com confirmation
+
+**Note:** `QRZCOM_QSO_UPLOAD_STATUS` is intentionally **not** used for confirmation detection — it only indicates that a QSO was uploaded to QRZ.com, not that it was confirmed by the other station.
 
 ### Confirmation Logic
-A QSO is marked as **Confirmed** if ANY confirmation field contains `Y` or `V`:
-- LOTW: `LOTW_QSL_RCVD = Y`
-- eQSL: `EQSL_QSL_RCVD = Y`
-- Paper: `QSL_RCVD = Y`
-- QRZ.com: `QRZCOM_QSL_RCVD = Y` or `V`
+A QSO is marked as **Confirmed** if ANY confirmation field contains `Y` (Yes) or `V` (Verified):
+- LOTW: `LOTW_QSL_RCVD = Y` or `V`
+- eQSL: `EQSL_QSL_RCVD = Y` or `V`
+- Paper: `QSL_RCVD = Y` or `V`
+- QRZ.com: `QRZCOM_QSL_RCVD = Y` or `V`, `QRZ_QSL_RCVD = Y` or `V`, `QRZCOM_QSO_DOWNLOAD_STATUS = Y` or `V`
 
 ### Mode Categorization
 QSOs are automatically categorized by operating mode:
@@ -170,7 +172,7 @@ The analyzer supports QRZ.com confirmation fields from multiple logging applicat
 | Software | QRZ Fields Recognized |
 |----------|----------------------|
 | **Log4OM** | `QRZCOM_QSO_DOWNLOAD_STATUS`, `QRZ_QSL_RCVD` |
-| **WaveLog** | `QRZCOM_QSO_UPLOAD_STATUS` |
+| **WaveLog** | `QRZCOM_QSO_DOWNLOAD_STATUS` |
 | **Standard ADIF** | `QRZCOM_QSL_RCVD` |
 
 Country names and continents are automatically resolved from the built-in DXCC lookup table when ADIF files do not contain `COUNTRY` or `CONT` fields (common with Logger32, WSJT-X, N1MM, and WaveLog exports).
