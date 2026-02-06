@@ -10,36 +10,58 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 
 ## Features
 
-### 🔒 Complete Privacy
+### Complete Privacy
 - **100% Client-Side Processing** - Your logbook data never leaves your browser
 - **No Server Communication** - No uploads, no tracking, no data storage
 - **Secure by Design** - Uses browser's FileReader API for local file access
 
-### 📊 Comprehensive Analysis
-- **Multi-Band Tracking** - Analyze 40m, 30m, 20m, 17m, 15m, 12m, 10m bands
+### Comprehensive Analysis
+- **Multi-Band Tracking** - Analyze 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m bands
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
+- **Context-Sensitive Display** - QSO counts, band status, and confirmation indicators adapt dynamically to active filters
 
-### 🎨 Modern Interface
-- **Interactive Dashboard** - Real-time statistics (Total QSOs, Worked, Confirmed, %)
-- **Advanced Filtering** - Search by country name or DXCC ID
-- **Status Filters** - View All / Confirmed Only / Worked Only
+### Advanced Filtering System
+- **Search** - Filter by country name or DXCC ID
+- **Status Filter** - View All / Confirmed Only / Worked Only
 - **Mode Filter** - Filter by operating mode (SSB, CW, Digital)
-- **Sticky Headers** - Keep columns visible while scrolling
-- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Operator Filter** - Filter by station callsign (e.g. DK9RC vs. 9A/DK9RC), shown only when multiple callsigns are present in the log
+- **Continent Filter** - Filter by continent (EU, NA, AF, SA, AS, OC)
+- **Confirmation Platform Filter** - Filter by LOTW, eQSL, QRZ, or Paper
+- **Band Filter** - Focus analysis on a single band (80m-10m)
+- **Active Filter Tags** - Visual chips showing active filters with individual remove buttons and "Reset All"
+- **Intelligent Filter Interaction** - Filters work together contextually: band status respects platform filter, confirmation checkmarks respect band filter, QSO counts respect both
 
-### ⚡ High Performance
+### Column Sorting
+- **All Columns Sortable** - Click any column header to sort
+- **Smart Default Direction** - Bands, platforms, and QSOs start descending (C/checkmark/highest first); text columns start ascending
+- **Visual Sort Indicators** - Chevron icons show current sort column and direction
+
+### Interactive Dashboard
+- **Real-Time Statistics** - Total QSOs, DXCC Worked, DXCC Confirmed, Confirmation Rate
+- **Filter-Aware Dashboard** - Statistics update dynamically when filters are active
+- **Comparison Display** - Shows "of X total" when filtered values differ from overall totals
+- **Results Counter** - "Showing X of Y entities" below the controls
+
+### Modern Interface
+- **Sticky Headers** - Keep columns visible while scrolling
+- **Sticky Country Column** - Keep country names visible when scrolling horizontally
+- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Pagination** - 15 entries per page with navigation controls
+
+### High Performance
 - **Optimized for Large Logs** - Handle 10,000+ QSOs without UI blocking
 - **Efficient Parsing** - Regex-based ADIF tag extraction
 - **Smart Memoization** - React hooks for performance optimization
 - **Instant Results** - Real-time analysis and visualization
 
-### 📤 Export & Print Capabilities
-- **CSV Export** - Download your analysis with current filters applied
+### Export & Print
+- **CSV Export** - Download your analysis with current filters applied and filter info header
 - **Print Report** - Professional print-friendly reports (A4 landscape)
 - **PDF Generation** - Save reports as PDF via browser print dialog
-- **Preserved Filters** - Export and print respect search and status filters
+- **Print-Only Filter Summary** - Active filters displayed in printed output
+- **Preserved Filters** - Export and print respect all active filters including context-sensitive QSO counts and band status
 
 ## Quick Start
 
@@ -80,18 +102,20 @@ The optimized build will be in the `dist/` directory.
 
 2. **View Your Statistics**
    - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, and confirmation percentage
+   - All statistics update dynamically when filters are applied
 
 3. **Explore Your Data**
    - Use the search bar to find specific countries or DXCC entities
-   - Filter by status: All, Confirmed Only, or Worked Only
-   - Filter by mode: All Modes, SSB, CW, or Digital
+   - Filter by status, mode, operator, continent, confirmation platform, or band
+   - Combine multiple filters for detailed analysis
+   - Sort any column by clicking its header
    - Navigate through pages (15 entries per page)
 
 4. **Export & Print Results**
-   - Click "Export CSV" to download your filtered analysis as spreadsheet
+   - Click "Export CSV" to download your filtered analysis as spreadsheet (includes filter info)
    - Click "Print Report" to generate a professional print-friendly report
    - Save as PDF using your browser's print dialog
-   - All exports and prints respect your current filters
+   - All exports and prints respect your current filters with context-sensitive data
 
 ## ADIF Field Support
 
@@ -103,6 +127,8 @@ The optimized build will be in the `dist/` directory.
 - `COUNTRY` - Country name (used as display name)
 - `CONT` - Continent code
 - `MODE` - Operating mode (for mode filtering)
+- `STATION_CALLSIGN` - Station callsign used (for operator filtering)
+- `OPERATOR` - Operator callsign (fallback for operator filtering)
 - `LOTW_QSL_RCVD` - LOTW confirmation status
 - `EQSL_QSL_RCVD` - eQSL confirmation status
 - `QSL_RCVD` - Paper QSL confirmation status
@@ -122,8 +148,6 @@ QSOs are automatically categorized by operating mode:
 - **Digital**: FT8, FT4, VARA HF, RTTY, PSK31, PSK63, JT65, JT9, WINMOR, ARDOP, PACTOR, and other HF digital modes
 - **Unknown**: VHF/UHF modes (FM, DMR) and other modes not categorized above
 
-Mode filtering allows you to analyze DXCC progress separately for each mode category.
-
 ## Log4OM Compatibility
 
 The analyzer includes special handling for **Log4OM** ADIF extensions, particularly for QRZ.com confirmation tracking:
@@ -131,42 +155,6 @@ The analyzer includes special handling for **Log4OM** ADIF extensions, particula
 - `QRZ_QSL_RCVD`
 
 These fields are automatically recognized alongside standard ADIF fields.
-
-## Mode Filter Feature
-
-The **Mode Filter** allows you to analyze your DXCC progress by operating mode. This is useful for:
-- Tracking mode-specific awards (e.g., DXCC Digital, DXCC CW)
-- Comparing your progress across different modes
-- Analyzing which modes work best for DXing
-
-### Supported Modes
-
-#### SSB (Phone)
-- USB (Upper Sideband)
-- LSB (Lower Sideband)
-- AM (Amplitude Modulation)
-
-#### CW (Morse Code)
-- CW (Continuous Wave)
-
-#### Digital Modes
-- **WSJT-X**: FT8, FT4, JT65, JT9, JT4, WSPR, Q65
-- **Winlink**: VARA HF, WINMOR, ARDOP, PACTOR
-- **RTTY/PSK**: RTTY, PSK31, PSK63, PSK125, QPSK, BPSK
-- **Other**: MFSK, OLIVIA, CONTESTIA, HELL, MT63, DOMINO, THROB, FSK, AFSK, PACKET, APRS, AX25
-
-### How It Works
-
-1. Select a mode from the dropdown filter (All Modes, SSB, CW, or Digital)
-2. The analyzer automatically recalculates:
-   - Total QSOs for that mode
-   - DXCC entities worked in that mode
-   - DXCC entities confirmed in that mode
-   - Confirmation percentage for that mode
-3. The band matrix updates to show only Worked/Confirmed status for the selected mode
-4. Export and print functions respect the mode filter
-
-**Note:** VHF/UHF modes like FM and DMR are not included in the mode categories and only appear when "All Modes" is selected.
 
 ## Technology Stack
 
@@ -187,7 +175,7 @@ Amateur Radio DXCC Analyzer Pro/
 │   ├── hooks/                   # Custom React hooks (future)
 │   ├── App.jsx                  # Root component
 │   ├── main.jsx                 # Application entry point
-│   └── index.css                # Global styles with Tailwind
+│   └── index.css                # Global styles with Tailwind & print
 ├── public/                      # Static assets
 ├── index.html                   # HTML template
 ├── package.json                 # Dependencies and scripts
@@ -211,9 +199,10 @@ Amateur Radio DXCC Analyzer Pro/
 The application uses a **single-file component architecture** for the main analyzer:
 
 1. **ADIF Parser** - Regex-based extraction of ADIF tags
-2. **Analysis Engine** - Band matrix calculation and confirmation logic
-3. **React Components** - UI rendering with hooks for state management
-4. **Export Module** - CSV generation from filtered data
+2. **Analysis Engine** - Band matrix calculation with per-band/per-platform QSO tracking and confirmation logic
+3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
+4. **React Components** - UI rendering with hooks for state management
+5. **Export Module** - CSV generation from filtered data with filter info header
 
 See `CLAUDE.md` for detailed architecture documentation.
 
@@ -274,12 +263,23 @@ Future enhancements under consideration:
 - [ ] Visual charts and graphs (continent breakdown, band activity)
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
-- [ ] Continent-based filtering
-- [x] Print-friendly report generation ✅
-- [x] Mode-specific analysis (SSB, CW, Digital) ✅
+- [x] Print-friendly report generation
+- [x] Mode-specific analysis (SSB, CW, Digital)
+- [x] 80m band support
+- [x] Column sorting with smart default directions
+- [x] Continent filter
+- [x] Confirmation platform filter (LOTW, eQSL, QRZ, Paper)
+- [x] Band filter
+- [x] Operator/callsign filter
+- [x] Context-sensitive filter interaction
+- [x] Active filter tags with reset
+- [x] Filter-aware dashboard statistics
+- [x] Results counter
+- [x] CSV export with filter info
+- [x] Print-only filter summary
 
 ---
 
-**73 de DK9RC** 📻
+**73 de DK9RC**
 
 *Happy DXing!*

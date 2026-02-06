@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Upload, Download, Search, Filter, Printer } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X } from 'lucide-react'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -12,11 +12,17 @@ function DXCCAnalyzer() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all') // 'all', 'confirmed', 'worked'
   const [filterMode, setFilterMode] = useState('all') // 'all', 'ssb', 'cw', 'digital'
+  const [filterOperator, setFilterOperator] = useState('all')
+  const [filterContinent, setFilterContinent] = useState('all')
+  const [filterConfirmation, setFilterConfirmation] = useState('all')
+  const [filterBand, setFilterBand] = useState('all')
+  const [sortColumn, setSortColumn] = useState('country')
+  const [sortDirection, setSortDirection] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 15
 
   // Supported bands
-  const BANDS = ['40m', '30m', '20m', '17m', '15m', '12m', '10m']
+  const BANDS = ['80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m']
 
   // Mode categories (HF modes only - VHF/UHF modes like FM, DMR excluded)
   const MODE_CATEGORIES = {
@@ -123,18 +129,26 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Analyze QSOs and build DXCC matrix (with optional mode filter)
+   * Analyze QSOs and build DXCC matrix (with optional mode and operator filter)
    * @param {Array} qsos - Array of QSO records
    * @param {string} modeFilter - Optional mode filter: 'all', 'ssb', 'cw', 'digital'
+   * @param {string} operatorFilter - Optional operator callsign filter
    * @returns {Object} DXCC analysis data
    */
-  const analyzeQSOs = (qsos, modeFilter = 'all') => {
+  const analyzeQSOs = (qsos, modeFilter = 'all', operatorFilter = 'all') => {
     const dxccData = {}
 
-    // Filter QSOs by mode category if specified
-    const filteredQsos = modeFilter === 'all'
+    // Filter QSOs by mode category and operator if specified
+    let filteredQsos = modeFilter === 'all'
       ? qsos
       : qsos.filter(qso => categorizeMode(qso.MODE) === modeFilter)
+
+    if (operatorFilter !== 'all') {
+      filteredQsos = filteredQsos.filter(qso => {
+        const call = (qso.STATION_CALLSIGN || qso.OPERATOR || '').toUpperCase()
+        return call === operatorFilter
+      })
+    }
 
     filteredQsos.forEach(qso => {
       const dxccId = qso.DXCC
@@ -155,36 +169,55 @@ function DXCCAnalyzer() {
           eqsl: false,
           qrz: false,
           qsl: false,
-          bands: {}
+          bands: {},
+          bandQsos: {},
+          bandConfirmations: {},
+          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
+          bandPlatformQsos: {}
         }
 
         BANDS.forEach(b => {
           dxccData[dxccId].bands[b] = null
+          dxccData[dxccId].bandQsos[b] = 0
+          dxccData[dxccId].bandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
+          dxccData[dxccId].bandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
         })
       }
 
       dxccData[dxccId].total++
 
-      // Track confirmation platforms
-      if (qso.LOTW_QSL_RCVD?.toUpperCase() === 'Y') dxccData[dxccId].lotw = true
-      if (qso.EQSL_QSL_RCVD?.toUpperCase() === 'Y') dxccData[dxccId].eqsl = true
-      if (qso.QSL_RCVD?.toUpperCase() === 'Y') dxccData[dxccId].qsl = true
-      if (['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS'].some(
+      // Track confirmation platforms and count confirmed QSOs per platform
+      const isLotw = qso.LOTW_QSL_RCVD?.toUpperCase() === 'Y'
+      const isEqsl = qso.EQSL_QSL_RCVD?.toUpperCase() === 'Y'
+      const isQsl = qso.QSL_RCVD?.toUpperCase() === 'Y'
+      const isQrz = ['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS'].some(
         f => ['Y', 'V'].includes(qso[f]?.toUpperCase())
-      )) {
-        dxccData[dxccId].qrz = true
-      }
+      )
 
-      // Update band status
+      if (isLotw) { dxccData[dxccId].lotw = true; dxccData[dxccId].platformQsos.lotw++ }
+      if (isEqsl) { dxccData[dxccId].eqsl = true; dxccData[dxccId].platformQsos.eqsl++ }
+      if (isQsl) { dxccData[dxccId].qsl = true; dxccData[dxccId].platformQsos.qsl++ }
+      if (isQrz) { dxccData[dxccId].qrz = true; dxccData[dxccId].platformQsos.qrz++ }
+
+      // Update band status, count, and per-band confirmations
       if (band && BANDS.includes(band.toLowerCase())) {
         const normalizedBand = band.toLowerCase()
         const currentStatus = dxccData[dxccId].bands[normalizedBand]
+        dxccData[dxccId].bandQsos[normalizedBand]++
 
         if (confirmed) {
           dxccData[dxccId].bands[normalizedBand] = 'C'
         } else if (!currentStatus) {
           dxccData[dxccId].bands[normalizedBand] = 'W'
         }
+
+        // Track per-band confirmation platforms and counts
+        const bc = dxccData[dxccId].bandConfirmations[normalizedBand]
+        const bpq = dxccData[dxccId].bandPlatformQsos[normalizedBand]
+        if (isLotw) { bc.lotw = true; bpq.lotw++ }
+        if (isEqsl) { bc.eqsl = true; bpq.eqsl++ }
+        if (isQsl) { bc.qsl = true; bpq.qsl++ }
+        if (isQrz) { bc.qrz = true; bpq.qrz++ }
       }
     })
 
@@ -214,11 +247,22 @@ function DXCCAnalyzer() {
     reader.readAsText(file)
   }
 
-  // Reanalyze data when mode filter changes
+  // Extract available operator callsigns from QSO data
+  const availableOperators = useMemo(() => {
+    if (!logData) return []
+    const operators = new Set()
+    logData.qsos.forEach(qso => {
+      const call = qso.STATION_CALLSIGN || qso.OPERATOR
+      if (call) operators.add(call.toUpperCase())
+    })
+    return [...operators].sort()
+  }, [logData])
+
+  // Reanalyze data when mode or operator filter changes
   const analyzedData = useMemo(() => {
     if (!logData) return null
-    return analyzeQSOs(logData.qsos, filterMode)
-  }, [logData, filterMode])
+    return analyzeQSOs(logData.qsos, filterMode, filterOperator)
+  }, [logData, filterMode, filterOperator])
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -241,6 +285,44 @@ function DXCCAnalyzer() {
     }
   }, [analyzedData])
 
+  // Derive available continents from data
+  const availableContinents = useMemo(() => {
+    if (!analyzedData) return []
+    const continents = new Set()
+    Object.values(analyzedData).forEach(data => {
+      if (data.cont) continents.add(data.cont)
+    })
+    return [...continents].sort()
+  }, [analyzedData])
+
+  // Get display QSO count (respects band and confirmation filters)
+  const getDisplayQsos = (data) => {
+    if (filterBand !== 'all' && filterConfirmation !== 'all') {
+      return data.bandPlatformQsos[filterBand]?.[filterConfirmation] || 0
+    }
+    if (filterBand !== 'all') return data.bandQsos[filterBand] || 0
+    if (filterConfirmation !== 'all') return data.platformQsos[filterConfirmation] || 0
+    return data.total
+  }
+
+  // Get display confirmation status (respects band filter)
+  const getDisplayConfirmation = (data, platform) => {
+    if (filterBand !== 'all') return data.bandConfirmations[filterBand]?.[platform] || false
+    return data[platform]
+  }
+
+  // Get display band status (respects confirmation platform filter)
+  const getDisplayBandStatus = (data, band) => {
+    const status = data.bands[band]
+    if (!status) return null
+    if (filterConfirmation !== 'all') {
+      if (data.bandConfirmations[band]?.[filterConfirmation]) return 'C'
+      if (data.bandQsos[band] > 0) return 'W'
+      return null
+    }
+    return status
+  }
+
   // Filter and search data
   const filteredData = useMemo(() => {
     if (!analyzedData) return []
@@ -256,20 +338,109 @@ function DXCCAnalyzer() {
       )
     }
 
-    // Apply status filter
-    if (filterStatus === 'confirmed') {
+    // Apply continent filter
+    if (filterContinent !== 'all') {
+      entries = entries.filter(([_, data]) => data.cont === filterContinent)
+    }
+
+    // Apply band filter
+    if (filterBand !== 'all') {
       entries = entries.filter(([_, data]) =>
-        BANDS.some(band => data.bands[band] === 'C')
-      )
-    } else if (filterStatus === 'worked') {
-      entries = entries.filter(([_, data]) =>
-        BANDS.every(band => data.bands[band] !== 'C') &&
-        BANDS.some(band => data.bands[band] === 'W')
+        data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
       )
     }
 
-    return entries.sort((a, b) => a[1].country.localeCompare(b[1].country))
-  }, [analyzedData, searchTerm, filterStatus])
+    // Apply confirmation platform filter (respects band filter)
+    if (filterConfirmation !== 'all') {
+      if (filterBand !== 'all') {
+        entries = entries.filter(([_, data]) => data.bandConfirmations[filterBand]?.[filterConfirmation] === true)
+      } else {
+        entries = entries.filter(([_, data]) => data[filterConfirmation] === true)
+      }
+    }
+
+    // Apply status filter (respects active band filter)
+    const bandsToCheck = filterBand !== 'all' ? [filterBand] : BANDS
+    if (filterStatus === 'confirmed') {
+      entries = entries.filter(([_, data]) =>
+        bandsToCheck.some(band => data.bands[band] === 'C')
+      )
+    } else if (filterStatus === 'worked') {
+      entries = entries.filter(([_, data]) =>
+        bandsToCheck.every(band => data.bands[band] !== 'C') &&
+        bandsToCheck.some(band => data.bands[band] === 'W')
+      )
+    }
+
+    // Sort
+    return entries.sort((a, b) => {
+      const [idA, dataA] = a
+      const [idB, dataB] = b
+      let comparison = 0
+
+      if (sortColumn === 'country') {
+        comparison = dataA.country.localeCompare(dataB.country)
+      } else if (sortColumn === 'dxcc') {
+        comparison = parseInt(idA) - parseInt(idB)
+      } else if (sortColumn === 'cont') {
+        comparison = (dataA.cont || '').localeCompare(dataB.cont || '')
+      } else if (sortColumn === 'qsos') {
+        comparison = getDisplayQsos(dataA) - getDisplayQsos(dataB)
+      } else if (BANDS.includes(sortColumn)) {
+        const statusOrder = { 'C': 2, 'W': 1 }
+        const valA = statusOrder[getDisplayBandStatus(dataA, sortColumn)] || 0
+        const valB = statusOrder[getDisplayBandStatus(dataB, sortColumn)] || 0
+        comparison = valA - valB
+      } else if (['lotw', 'eqsl', 'qrz', 'qsl'].includes(sortColumn)) {
+        const confA = filterBand !== 'all' ? (dataA.bandConfirmations[filterBand]?.[sortColumn] || false) : dataA[sortColumn]
+        const confB = filterBand !== 'all' ? (dataB.bandConfirmations[filterBand]?.[sortColumn] || false) : dataB[sortColumn]
+        comparison = (confA === confB) ? 0 : confA ? 1 : -1
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [analyzedData, searchTerm, filterStatus, filterContinent, filterConfirmation, filterBand, sortColumn, sortDirection])
+
+  // Check if any filter is active
+  const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all'
+
+  // Calculate filtered statistics (based on what's shown in the table)
+  const filteredStats = useMemo(() => {
+    if (!filteredData.length) return { totalQSOs: 0, worked: 0, confirmed: 0, percentage: 0 }
+
+    const bandsToCheck = filterBand !== 'all' ? [filterBand] : BANDS
+    const worked = filteredData.length
+    const confirmed = filteredData.filter(([_, data]) =>
+      bandsToCheck.some(band => data.bands[band] === 'C')
+    ).length
+    const totalQSOs = filteredData.reduce((sum, [_, data]) => sum + getDisplayQsos(data), 0)
+
+    return {
+      totalQSOs,
+      worked,
+      confirmed,
+      percentage: worked > 0 ? ((confirmed / worked) * 100).toFixed(1) : 0
+    }
+  }, [filteredData, filterBand, filterConfirmation])
+
+  // Reset all filters
+  const resetAllFilters = () => {
+    setSearchTerm('')
+    setFilterMode('all')
+    setFilterOperator('all')
+    setFilterStatus('all')
+    setFilterContinent('all')
+    setFilterConfirmation('all')
+    setFilterBand('all')
+    setCurrentPage(1)
+  }
+
+  // Active filter labels for display
+  const activeFilterLabels = {
+    mode: { ssb: 'SSB', cw: 'CW', digital: 'Digital' },
+    status: { confirmed: 'Confirmed', worked: 'Worked Only' },
+    confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' }
+  }
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
@@ -284,20 +455,37 @@ function DXCCAnalyzer() {
   const exportToCSV = () => {
     if (!filteredData.length) return
 
+    // Build filter info line
+    const filters = []
+    if (searchTerm) filters.push(`Search: ${searchTerm}`)
+    if (filterStatus !== 'all') filters.push(`Status: ${activeFilterLabels.status[filterStatus]}`)
+    if (filterMode !== 'all') filters.push(`Mode: ${activeFilterLabels.mode[filterMode]}`)
+    if (filterOperator !== 'all') filters.push(`Operator: ${filterOperator}`)
+    if (filterContinent !== 'all') filters.push(`Continent: ${filterContinent}`)
+    if (filterConfirmation !== 'all') filters.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
+    if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
+
     const headers = ['DXCC ID', 'Country', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
     const rows = filteredData.map(([id, data]) => [
       id,
       data.country,
       data.cont,
-      data.total,
-      ...BANDS.map(band => data.bands[band] || ''),
-      data.lotw ? 'Yes' : 'No',
-      data.eqsl ? 'Yes' : 'No',
-      data.qrz ? 'Yes' : 'No',
-      data.qsl ? 'Yes' : 'No'
+      getDisplayQsos(data),
+      ...BANDS.map(band => getDisplayBandStatus(data, band) || ''),
+      getDisplayConfirmation(data, 'lotw') ? 'Yes' : 'No',
+      getDisplayConfirmation(data, 'eqsl') ? 'Yes' : 'No',
+      getDisplayConfirmation(data, 'qrz') ? 'Yes' : 'No',
+      getDisplayConfirmation(data, 'qsl') ? 'Yes' : 'No'
     ])
 
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
+    const csvRows = []
+    if (filters.length > 0) {
+      csvRows.push([`Filtered by: ${filters.join(' | ')}`])
+    }
+    csvRows.push(headers)
+    csvRows.push(...rows)
+
+    const csv = csvRows.map(row => row.join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -314,12 +502,34 @@ function DXCCAnalyzer() {
     window.print()
   }
 
+  /**
+   * Handle column sort
+   */
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      // Bands and confirmation columns default to descending (show C/✓ first)
+      const descFirst = BANDS.includes(column) || ['lotw', 'eqsl', 'qrz', 'qsl', 'qsos'].includes(column)
+      setSortDirection(descFirst ? 'desc' : 'asc')
+    }
+    setCurrentPage(1)
+  }
+
+  const sortIndicator = (column) => {
+    if (sortColumn !== column) return <span className="ml-1 text-gray-600 text-xs">&#9650;</span>
+    return sortDirection === 'asc'
+      ? <ChevronUp className="inline w-4 h-4 ml-1" />
+      : <ChevronDown className="inline w-4 h-4 ml-1" />
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.3.0</p>
       </div>
 
       {/* File Upload */}
@@ -344,27 +554,117 @@ function DXCCAnalyzer() {
       {logData && (
         <>
           {/* Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-gray-800 rounded-lg p-4">
               <div className="text-gray-400 text-sm mb-1">Total QSOs</div>
-              <div className="text-3xl font-bold">{stats.totalQSOs}</div>
+              <div className="text-3xl font-bold">
+                {hasActiveFilters ? filteredStats.totalQSOs : stats.totalQSOs}
+              </div>
+              {hasActiveFilters && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.totalQSOs} total</div>
+              )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
               <div className="text-gray-400 text-sm mb-1">DXCC Worked</div>
-              <div className="text-3xl font-bold text-yellow-500">{stats.worked}</div>
+              <div className="text-3xl font-bold text-yellow-500">
+                {hasActiveFilters ? filteredStats.worked : stats.worked}
+              </div>
+              {hasActiveFilters && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.worked} total</div>
+              )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
               <div className="text-gray-400 text-sm mb-1">DXCC Confirmed</div>
-              <div className="text-3xl font-bold text-green-500">{stats.confirmed}</div>
+              <div className="text-3xl font-bold text-green-500">
+                {hasActiveFilters ? filteredStats.confirmed : stats.confirmed}
+              </div>
+              {hasActiveFilters && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.confirmed} total</div>
+              )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
               <div className="text-gray-400 text-sm mb-1">Confirmation Rate</div>
-              <div className="text-3xl font-bold text-blue-500">{stats.percentage}%</div>
+              <div className="text-3xl font-bold text-blue-500">
+                {hasActiveFilters ? filteredStats.percentage : stats.percentage}%
+              </div>
+              {hasActiveFilters && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">overall {stats.percentage}%</div>
+              )}
             </div>
           </div>
 
+          {/* Print-only filter summary */}
+          {hasActiveFilters && (
+            <div className="hidden print:block text-sm mb-4 border-b border-gray-300 pb-2">
+              Filtered by: {[
+                filterMode !== 'all' && `Mode: ${activeFilterLabels.mode[filterMode]}`,
+                filterOperator !== 'all' && `Operator: ${filterOperator}`,
+                filterStatus !== 'all' && `Status: ${activeFilterLabels.status[filterStatus]}`,
+                filterContinent !== 'all' && `Continent: ${filterContinent}`,
+                filterConfirmation !== 'all' && `Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`,
+                filterBand !== 'all' && `Band: ${filterBand}`,
+                searchTerm && `Search: "${searchTerm}"`
+              ].filter(Boolean).join(' | ')}
+            </div>
+          )}
+
+          {/* Active Filter Tags */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+              <span className="text-gray-400 text-sm">Active filters:</span>
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  &quot;{searchTerm}&quot;
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setSearchTerm(''); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterMode !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {activeFilterLabels.mode[filterMode]}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterMode('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterStatus !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {activeFilterLabels.status[filterStatus]}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterStatus('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterContinent !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {filterContinent}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterContinent('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterConfirmation !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {activeFilterLabels.confirmation[filterConfirmation]}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterConfirmation('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterOperator !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {filterOperator}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterOperator('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterBand !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {filterBand}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterBand('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              <button
+                onClick={resetAllFilters}
+                className="text-sm text-red-400 hover:text-red-300 transition ml-2"
+              >
+                Reset All
+              </button>
+            </div>
+          )}
+
           {/* Controls */}
-          <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-4 items-center">
+          <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-4 items-center print:hidden">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -372,7 +672,7 @@ function DXCCAnalyzer() {
                   type="text"
                   placeholder="Search country or DXCC ID..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
                   className="w-full pl-10 pr-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -380,7 +680,7 @@ function DXCCAnalyzer() {
 
             <div className="flex gap-2 flex-wrap">
               <button
-                onClick={() => setFilterStatus('all')}
+                onClick={() => { setFilterStatus('all'); setCurrentPage(1) }}
                 className={`px-4 py-2 rounded-lg transition ${
                   filterStatus === 'all' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
@@ -388,7 +688,7 @@ function DXCCAnalyzer() {
                 All
               </button>
               <button
-                onClick={() => setFilterStatus('confirmed')}
+                onClick={() => { setFilterStatus('confirmed'); setCurrentPage(1) }}
                 className={`px-4 py-2 rounded-lg transition ${
                   filterStatus === 'confirmed' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
@@ -396,7 +696,7 @@ function DXCCAnalyzer() {
                 Confirmed
               </button>
               <button
-                onClick={() => setFilterStatus('worked')}
+                onClick={() => { setFilterStatus('worked'); setCurrentPage(1) }}
                 className={`px-4 py-2 rounded-lg transition ${
                   filterStatus === 'worked' ? 'bg-yellow-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
@@ -405,7 +705,7 @@ function DXCCAnalyzer() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Filter className="w-5 h-5 text-gray-400" />
               <select
                 value={filterMode}
@@ -419,6 +719,61 @@ function DXCCAnalyzer() {
                 <option value="ssb">SSB</option>
                 <option value="cw">CW</option>
                 <option value="digital">Digital</option>
+              </select>
+              {availableOperators.length > 1 && (
+                <select
+                  value={filterOperator}
+                  onChange={(e) => {
+                    setFilterOperator(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                  className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+                >
+                  <option value="all">All Operators</option>
+                  {availableOperators.map(op => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
+              )}
+              <select
+                value={filterContinent}
+                onChange={(e) => {
+                  setFilterContinent(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+              >
+                <option value="all">All Continents</option>
+                {availableContinents.map(cont => (
+                  <option key={cont} value={cont}>{cont}</option>
+                ))}
+              </select>
+              <select
+                value={filterConfirmation}
+                onChange={(e) => {
+                  setFilterConfirmation(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+              >
+                <option value="all">All Platforms</option>
+                <option value="lotw">LOTW</option>
+                <option value="eqsl">eQSL</option>
+                <option value="qrz">QRZ</option>
+                <option value="qsl">Paper</option>
+              </select>
+              <select
+                value={filterBand}
+                onChange={(e) => {
+                  setFilterBand(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+              >
+                <option value="all">All Bands</option>
+                {BANDS.map(band => (
+                  <option key={band} value={band}>{band}</option>
+                ))}
               </select>
             </div>
 
@@ -439,23 +794,46 @@ function DXCCAnalyzer() {
             </button>
           </div>
 
+          {/* Results Counter */}
+          <div className="text-gray-400 text-sm mb-2 px-1 print:hidden">
+            Showing {filteredData.length} of {Object.keys(analyzedData).length} entities
+          </div>
+
           {/* Table */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-900 sticky top-0">
                   <tr>
-                    <th className="px-4 py-3 text-left sticky left-0 bg-gray-900 z-10">Country</th>
-                    <th className="px-4 py-3 text-left">DXCC</th>
-                    <th className="px-4 py-3 text-left">Cont</th>
-                    <th className="px-4 py-3 text-center">QSOs</th>
+                    <th className="px-4 py-3 text-left sticky left-0 bg-gray-900 z-10 cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('country')}>
+                      Country {sortIndicator('country')}
+                    </th>
+                    <th className="px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('dxcc')}>
+                      DXCC {sortIndicator('dxcc')}
+                    </th>
+                    <th className="px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('cont')}>
+                      Cont {sortIndicator('cont')}
+                    </th>
+                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qsos')}>
+                      QSOs {sortIndicator('qsos')}
+                    </th>
                     {BANDS.map(band => (
-                      <th key={band} className="px-4 py-3 text-center">{band}</th>
+                      <th key={band} className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort(band)}>
+                        {band} {sortIndicator(band)}
+                      </th>
                     ))}
-                    <th className="px-4 py-3 text-center" title="Logbook of the World">LOTW</th>
-                    <th className="px-4 py-3 text-center" title="eQSL.cc">eQSL</th>
-                    <th className="px-4 py-3 text-center" title="QRZ.com">QRZ</th>
-                    <th className="px-4 py-3 text-center" title="Paper QSL">Paper</th>
+                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('lotw')} title="Logbook of the World">
+                      LOTW {sortIndicator('lotw')}
+                    </th>
+                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('eqsl')} title="eQSL.cc">
+                      eQSL {sortIndicator('eqsl')}
+                    </th>
+                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qrz')} title="QRZ.com">
+                      QRZ {sortIndicator('qrz')}
+                    </th>
+                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qsl')} title="Paper QSL">
+                      Paper {sortIndicator('qsl')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -465,21 +843,24 @@ function DXCCAnalyzer() {
                       <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
-                      <td className="px-4 py-3 text-center">{data.total}</td>
-                      {BANDS.map(band => (
-                        <td key={band} className="px-4 py-3 text-center">
-                          {data.bands[band] === 'C' && (
-                            <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
-                          )}
-                          {data.bands[band] === 'W' && (
-                            <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-center">{data.lotw && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.eqsl && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qrz && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qsl && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
+                      {BANDS.map(band => {
+                        const status = getDisplayBandStatus(data, band)
+                        return (
+                          <td key={band} className="px-4 py-3 text-center">
+                            {status === 'C' && (
+                              <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
+                            )}
+                            {status === 'W' && (
+                              <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
                     </tr>
                   ))}
                   {/* Print all data */}
@@ -488,21 +869,24 @@ function DXCCAnalyzer() {
                       <td className="px-4 py-3 font-medium">{data.country}</td>
                       <td className="px-4 py-3">{id}</td>
                       <td className="px-4 py-3">{data.cont}</td>
-                      <td className="px-4 py-3 text-center">{data.total}</td>
-                      {BANDS.map(band => (
-                        <td key={band} className="px-4 py-3 text-center">
-                          {data.bands[band] === 'C' && (
-                            <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
-                          )}
-                          {data.bands[band] === 'W' && (
-                            <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
-                          )}
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-center">{data.lotw && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.eqsl && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qrz && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{data.qsl && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
+                      {BANDS.map(band => {
+                        const status = getDisplayBandStatus(data, band)
+                        return (
+                          <td key={band} className="px-4 py-3 text-center">
+                            {status === 'C' && (
+                              <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
+                            )}
+                            {status === 'W' && (
+                              <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
+                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
                     </tr>
                   ))}
                 </tbody>
