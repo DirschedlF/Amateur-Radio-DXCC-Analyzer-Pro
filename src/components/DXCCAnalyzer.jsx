@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3 } from 'lucide-react'
+import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -19,6 +20,7 @@ function DXCCAnalyzer() {
   const [sortColumn, setSortColumn] = useState('country')
   const [sortDirection, setSortDirection] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [showCharts, setShowCharts] = useState(false)
   const itemsPerPage = 15
 
   // Supported bands
@@ -423,6 +425,82 @@ function DXCCAnalyzer() {
     }
   }, [filteredData, filterBand, filterConfirmation])
 
+  // Chart data aggregation
+  const chartData = useMemo(() => {
+    if (!filteredData.length) return null
+
+    // Continent breakdown
+    const contMap = {}
+    filteredData.forEach(([_, data]) => {
+      const cont = data.cont || 'Unknown'
+      if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
+      contMap[cont].worked++
+      const bandsToCheck = filterBand !== 'all' ? [filterBand] : BANDS
+      if (bandsToCheck.some(band => data.bands[band] === 'C')) {
+        contMap[cont].confirmed++
+      }
+    })
+    const continentData = Object.entries(contMap)
+      .map(([name, counts]) => ({ name, ...counts, workedOnly: counts.worked - counts.confirmed }))
+      .sort((a, b) => b.worked - a.worked)
+
+    // Band activity
+    const bandData = BANDS.map(band => {
+      let confirmed = 0
+      let workedOnly = 0
+      filteredData.forEach(([_, data]) => {
+        const status = data.bands[band]
+        if (status === 'C') confirmed++
+        else if (status === 'W') workedOnly++
+      })
+      return { name: band, confirmed, workedOnly }
+    })
+
+    // Platform comparison
+    const platformCounts = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+    filteredData.forEach(([_, data]) => {
+      if (filterBand !== 'all') {
+        if (data.bandConfirmations[filterBand]?.lotw) platformCounts.lotw++
+        if (data.bandConfirmations[filterBand]?.eqsl) platformCounts.eqsl++
+        if (data.bandConfirmations[filterBand]?.qrz) platformCounts.qrz++
+        if (data.bandConfirmations[filterBand]?.qsl) platformCounts.qsl++
+      } else {
+        if (data.lotw) platformCounts.lotw++
+        if (data.eqsl) platformCounts.eqsl++
+        if (data.qrz) platformCounts.qrz++
+        if (data.qsl) platformCounts.qsl++
+      }
+    })
+    const platformData = [
+      { name: 'LOTW', count: platformCounts.lotw, fill: '#3b82f6' },
+      { name: 'eQSL', count: platformCounts.eqsl, fill: '#8b5cf6' },
+      { name: 'QRZ', count: platformCounts.qrz, fill: '#f59e0b' },
+      { name: 'Paper', count: platformCounts.qsl, fill: '#ef4444' }
+    ]
+
+    // Band x Continent heatmap
+    const allConts = [...new Set(filteredData.map(([_, d]) => d.cont).filter(Boolean))].sort()
+    const heatmapData = allConts.map(cont => {
+      const row = { continent: cont }
+      BANDS.forEach(band => {
+        let confirmed = 0
+        let worked = 0
+        filteredData.forEach(([_, data]) => {
+          if (data.cont !== cont) return
+          const status = data.bands[band]
+          if (status === 'C') confirmed++
+          else if (status === 'W') worked++
+        })
+        row[band] = confirmed + worked
+        row[`${band}_c`] = confirmed
+        row[`${band}_w`] = worked
+      })
+      return row
+    })
+
+    return { continentData, bandData, platformData, heatmapData, allConts }
+  }, [filteredData, filterBand])
+
   // Reset all filters
   const resetAllFilters = () => {
     setSearchTerm('')
@@ -529,7 +607,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.3.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.0</p>
       </div>
 
       {/* File Upload */}
@@ -592,6 +670,149 @@ function DXCCAnalyzer() {
               )}
             </div>
           </div>
+
+          {/* Charts Toggle */}
+          <div className="mb-4 print:hidden">
+            <button
+              onClick={() => setShowCharts(prev => !prev)}
+              className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
+                showCharts ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              {showCharts ? 'Hide Charts' : 'Show Charts'}
+            </button>
+          </div>
+
+          {/* Charts Section */}
+          {showCharts && chartData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
+              {/* Continent Breakdown - Stacked Bar Chart */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 text-center">DXCC by Continent</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.continentData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
+                      itemStyle={{ color: '#d1d5db' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : 'Worked Only']}
+                    />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : 'Worked Only'} />
+                    <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Band Activity - Stacked Bar Chart */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 text-center">Band Activity</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.bandData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
+                      itemStyle={{ color: '#d1d5db' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : 'Worked Only']}
+                    />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : 'Worked Only'} />
+                    <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Confirmation Platforms - Horizontal Bar Chart */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 text-center">Confirmation Platforms</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.platformData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} width={50} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
+                      itemStyle={{ color: '#d1d5db' }}
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      formatter={(value) => [`${value} entities`, 'Confirmed']}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      {chartData.platformData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Band x Continent Heatmap */}
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 text-center">Band x Continent</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th className="px-2 py-1 text-left text-gray-400"></th>
+                        {BANDS.map(band => (
+                          <th key={band} className="px-2 py-1 text-center text-gray-400 text-xs">{band}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chartData.heatmapData.map(row => {
+                        const maxVal = Math.max(...BANDS.map(b => row[b] || 0), 1)
+                        return (
+                          <tr key={row.continent}>
+                            <td className="px-2 py-1 font-medium text-gray-300">{row.continent}</td>
+                            {BANDS.map(band => {
+                              const total = row[band] || 0
+                              const confirmed = row[`${band}_c`] || 0
+                              const worked = row[`${band}_w`] || 0
+                              const intensity = total / maxVal
+                              return (
+                                <td key={band} className="px-1 py-1 text-center" title={`${row.continent} ${band}: ${confirmed}C / ${worked}W`}>
+                                  <div
+                                    className="rounded mx-auto flex items-center justify-center text-xs font-medium"
+                                    style={{
+                                      width: '36px',
+                                      height: '28px',
+                                      backgroundColor: total === 0
+                                        ? '#374151'
+                                        : confirmed >= worked
+                                          ? `rgba(34, 197, 94, ${0.2 + intensity * 0.8})`
+                                          : `rgba(234, 179, 8, ${0.2 + intensity * 0.8})`,
+                                      color: total === 0 ? '#6b7280' : '#fff'
+                                    }}
+                                  >
+                                    {total || '-'}
+                                  </div>
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-400">
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.6)' }}></span> Mostly Confirmed</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: 'rgba(234, 179, 8, 0.6)' }}></span> Mostly Worked</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-700"></span> None</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Print-only filter summary */}
           {hasActiveFilters && (
