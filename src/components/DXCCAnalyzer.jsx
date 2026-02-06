@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3 } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { lookupDXCC } from '../utils/dxccEntities'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -122,7 +123,8 @@ function DXCCAnalyzer() {
       'QSL_RCVD',
       'QRZCOM_QSL_RCVD',
       'QRZ_QSL_RCVD',
-      'QRZCOM_QSO_DOWNLOAD_STATUS'
+      'QRZCOM_QSO_DOWNLOAD_STATUS',
+      'QRZCOM_QSO_UPLOAD_STATUS'    // WaveLog uses this for QRZ confirmation
     ]
 
     return confirmFields.some(field =>
@@ -157,15 +159,20 @@ function DXCCAnalyzer() {
       if (!dxccId) return
 
       const band = qso.BAND
-      const country = qso.COUNTRY || 'Unknown'
-      const continent = qso.CONT || ''
       const confirmed = isConfirmed(qso)
+
+      // Resolve country and continent: ADIF fields first, then DXCC lookup table fallback
+      const dxccLookup = lookupDXCC(dxccId)
+      const country = qso.COUNTRY || dxccLookup?.name || 'Unknown'
+      const continent = qso.CONT || dxccLookup?.cont || ''
+      const deleted = dxccLookup?.deleted || false
 
       // Initialize DXCC entry if not exists
       if (!dxccData[dxccId]) {
         dxccData[dxccId] = {
           country,
           cont: continent,
+          deleted,
           total: 0,
           lotw: false,
           eqsl: false,
@@ -192,7 +199,7 @@ function DXCCAnalyzer() {
       const isLotw = qso.LOTW_QSL_RCVD?.toUpperCase() === 'Y'
       const isEqsl = qso.EQSL_QSL_RCVD?.toUpperCase() === 'Y'
       const isQsl = qso.QSL_RCVD?.toUpperCase() === 'Y'
-      const isQrz = ['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS'].some(
+      const isQrz = ['QRZCOM_QSL_RCVD', 'QRZ_QSL_RCVD', 'QRZCOM_QSO_DOWNLOAD_STATUS', 'QRZCOM_QSO_UPLOAD_STATUS'].some(
         f => ['Y', 'V'].includes(qso[f]?.toUpperCase())
       )
 
@@ -544,10 +551,11 @@ function DXCCAnalyzer() {
     if (filterConfirmation !== 'all') filters.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
 
-    const headers = ['DXCC ID', 'Country', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
+    const headers = ['DXCC ID', 'Country', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
     const rows = filteredData.map(([id, data]) => [
       id,
       data.country,
+      data.deleted ? 'Yes' : '',
       data.cont,
       getDisplayQsos(data),
       ...BANDS.map(band => getDisplayBandStatus(data, band) || ''),
@@ -608,7 +616,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.1</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.2</p>
       </div>
 
       {/* File Upload */}
@@ -1062,7 +1070,10 @@ function DXCCAnalyzer() {
                   {/* Show paginated data on screen, all data when printing */}
                   {paginatedData.map(([id, data]) => (
                     <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition print:hidden">
-                      <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">{data.country}</td>
+                      <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">
+                        {data.country}
+                        {data.deleted && <span className="ml-2 text-xs text-red-400 font-normal">(deleted)</span>}
+                      </td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
@@ -1088,7 +1099,10 @@ function DXCCAnalyzer() {
                   {/* Print all data */}
                   {filteredData.map(([id, data]) => (
                     <tr key={`print-${id}`} className="border-t border-gray-700 print-show">
-                      <td className="px-4 py-3 font-medium">{data.country}</td>
+                      <td className="px-4 py-3 font-medium">
+                        {data.country}
+                        {data.deleted && <span className="ml-2 text-xs font-normal">(deleted)</span>}
+                      </td>
                       <td className="px-4 py-3">{id}</td>
                       <td className="px-4 py-3">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>

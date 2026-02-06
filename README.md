@@ -20,6 +20,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
+- **Built-in DXCC Lookup Table** - Resolves country names and continents from DXCC codes when ADIF fields are missing (ADIF 3.1.6 compliant, ~400 entities)
+- **Deleted Entity Detection** - Identifies and marks deleted DXCC entities (e.g. German Democratic Republic, Canal Zone)
 - **Context-Sensitive Display** - QSO counts, band status, and confirmation indicators adapt dynamically to active filters
 
 ### Advanced Filtering System
@@ -59,7 +61,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Pagination** - 15 entries per page with navigation controls
 
 ### High Performance
-- **Optimized for Large Logs** - Handle 10,000+ QSOs without UI blocking
+- **Optimized for Large Logs** - Tested with 180,000+ QSOs with smooth performance
 - **Efficient Parsing** - Regex-based ADIF tag extraction
 - **Smart Memoization** - React hooks for performance optimization
 - **Instant Results** - Real-time analysis and visualization
@@ -137,15 +139,15 @@ The optimized build will be in the `dist/` directory.
 - `BAND` - Operating band
 
 ### Optional Fields
-- `COUNTRY` - Country name (used as display name)
-- `CONT` - Continent code
+- `COUNTRY` - Country name (used as display name; resolved from built-in DXCC lookup table if missing)
+- `CONT` - Continent code (resolved from built-in DXCC lookup table if missing)
 - `MODE` - Operating mode (for mode filtering)
 - `STATION_CALLSIGN` - Station callsign used (for operator filtering)
 - `OPERATOR` - Operator callsign (fallback for operator filtering)
 - `LOTW_QSL_RCVD` - LOTW confirmation status
 - `EQSL_QSL_RCVD` - eQSL confirmation status
 - `QSL_RCVD` - Paper QSL confirmation status
-- `QRZCOM_QSL_RCVD` / `QRZ_QSL_RCVD` / `QRZCOM_QSO_DOWNLOAD_STATUS` - QRZ.com confirmation
+- `QRZCOM_QSL_RCVD` / `QRZ_QSL_RCVD` / `QRZCOM_QSO_DOWNLOAD_STATUS` / `QRZCOM_QSO_UPLOAD_STATUS` - QRZ.com confirmation
 
 ### Confirmation Logic
 A QSO is marked as **Confirmed** if ANY confirmation field contains `Y` or `V`:
@@ -161,13 +163,17 @@ QSOs are automatically categorized by operating mode:
 - **Digital**: FT8, FT4, VARA HF, RTTY, PSK31, PSK63, JT65, JT9, WINMOR, ARDOP, PACTOR, and other HF digital modes
 - **Unknown**: VHF/UHF modes (FM, DMR) and other modes not categorized above
 
-## Log4OM Compatibility
+## Logging Software Compatibility
 
-The analyzer includes special handling for **Log4OM** ADIF extensions, particularly for QRZ.com confirmation tracking:
-- `QRZCOM_QSO_DOWNLOAD_STATUS`
-- `QRZ_QSL_RCVD`
+The analyzer supports QRZ.com confirmation fields from multiple logging applications:
 
-These fields are automatically recognized alongside standard ADIF fields.
+| Software | QRZ Fields Recognized |
+|----------|----------------------|
+| **Log4OM** | `QRZCOM_QSO_DOWNLOAD_STATUS`, `QRZ_QSL_RCVD` |
+| **WaveLog** | `QRZCOM_QSO_UPLOAD_STATUS` |
+| **Standard ADIF** | `QRZCOM_QSL_RCVD` |
+
+Country names and continents are automatically resolved from the built-in DXCC lookup table when ADIF files do not contain `COUNTRY` or `CONT` fields (common with Logger32, WSJT-X, N1MM, and WaveLog exports).
 
 ## Technology Stack
 
@@ -185,7 +191,8 @@ Amateur Radio DXCC Analyzer Pro/
 ├── src/
 │   ├── components/
 │   │   └── DXCCAnalyzer.jsx    # Main application component
-│   ├── utils/                   # Utility functions (future)
+│   ├── utils/
+│   │   └── dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6)
 │   ├── hooks/                   # Custom React hooks (future)
 │   ├── App.jsx                  # Root component
 │   ├── main.jsx                 # Application entry point
@@ -228,7 +235,7 @@ See `CLAUDE.md` for detailed architecture documentation.
 - **Pagination**: Default 15 items per page keeps DOM size manageable
 - **Incremental Rendering**: Large logs are processed without blocking the UI
 
-Tested with logs containing over 10,000 QSOs with smooth performance.
+Tested with logs containing over 180,000 QSOs with smooth performance.
 
 ## Browser Compatibility
 
@@ -247,7 +254,7 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 1. Maintain the single-file component architecture
 2. Preserve client-side-only processing (no API calls)
-3. Test with large ADIF files (10,000+ QSOs)
+3. Test with large ADIF files (100,000+ QSOs)
 4. Follow existing code style (ESLint configuration)
 5. Update CLAUDE.md for architectural changes
 
@@ -276,6 +283,8 @@ For questions, issues, or feature requests, please open an issue on GitHub.
 Future enhancements under consideration:
 - [ ] Additional band support (6m, 2m, 70cm, etc.)
 - [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
+- [x] Built-in DXCC entity lookup table with deleted entity detection
+- [x] WaveLog QRZ.com confirmation field support
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
 - [x] Print-friendly report generation
