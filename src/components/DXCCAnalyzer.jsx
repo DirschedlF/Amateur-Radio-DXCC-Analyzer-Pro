@@ -444,12 +444,13 @@ function DXCCAnalyzer() {
       .map(([name, counts]) => ({ name, ...counts, workedOnly: counts.worked - counts.confirmed }))
       .sort((a, b) => b.worked - a.worked)
 
-    // Band activity
-    const bandData = BANDS.map(band => {
+    // Band activity (respects all filters)
+    const bandsToShow = filterBand !== 'all' ? [filterBand] : BANDS
+    const bandData = bandsToShow.map(band => {
       let confirmed = 0
       let workedOnly = 0
       filteredData.forEach(([_, data]) => {
-        const status = data.bands[band]
+        const status = getDisplayBandStatus(data, band)
         if (status === 'C') confirmed++
         else if (status === 'W') workedOnly++
       })
@@ -478,16 +479,16 @@ function DXCCAnalyzer() {
       { name: 'Paper', count: platformCounts.qsl, fill: '#ef4444' }
     ]
 
-    // Band x Continent heatmap
+    // Band x Continent heatmap (respects all filters)
     const allConts = [...new Set(filteredData.map(([_, d]) => d.cont).filter(Boolean))].sort()
     const heatmapData = allConts.map(cont => {
       const row = { continent: cont }
-      BANDS.forEach(band => {
+      bandsToShow.forEach(band => {
         let confirmed = 0
         let worked = 0
         filteredData.forEach(([_, data]) => {
           if (data.cont !== cont) return
-          const status = data.bands[band]
+          const status = getDisplayBandStatus(data, band)
           if (status === 'C') confirmed++
           else if (status === 'W') worked++
         })
@@ -498,8 +499,8 @@ function DXCCAnalyzer() {
       return row
     })
 
-    return { continentData, bandData, platformData, heatmapData, allConts }
-  }, [filteredData, filterBand])
+    return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
+  }, [filteredData, filterBand, filterConfirmation])
 
   // Reset all filters
   const resetAllFilters = () => {
@@ -607,7 +608,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.1</p>
       </div>
 
       {/* File Upload */}
@@ -763,18 +764,18 @@ function DXCCAnalyzer() {
                     <thead>
                       <tr>
                         <th className="px-2 py-1 text-left text-gray-400"></th>
-                        {BANDS.map(band => (
+                        {chartData.bandsToShow.map(band => (
                           <th key={band} className="px-2 py-1 text-center text-gray-400 text-xs">{band}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {chartData.heatmapData.map(row => {
-                        const maxVal = Math.max(...BANDS.map(b => row[b] || 0), 1)
+                        const maxVal = Math.max(...chartData.bandsToShow.map(b => row[b] || 0), 1)
                         return (
                           <tr key={row.continent}>
                             <td className="px-2 py-1 font-medium text-gray-300">{row.continent}</td>
-                            {BANDS.map(band => {
+                            {chartData.bandsToShow.map(band => {
                               const total = row[band] || 0
                               const confirmed = row[`${band}_c`] || 0
                               const worked = row[`${band}_w`] || 0

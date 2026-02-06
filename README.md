@@ -38,6 +38,14 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Smart Default Direction** - Bands, platforms, and QSOs start descending (C/checkmark/highest first); text columns start ascending
 - **Visual Sort Indicators** - Chevron icons show current sort column and direction
 
+### Visual Charts & Graphs
+- **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent
+- **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands
+- **Confirmation Platforms** - Horizontal bar chart comparing LOTW, eQSL, QRZ, and Paper confirmations
+- **Band × Continent Heatmap** - Color-intensity grid revealing gaps in your DXCC coverage
+- **Filter-Reactive** - All charts update dynamically when filters are applied
+- **Collapsible** - Toggle charts on/off via "Show Charts" button
+
 ### Interactive Dashboard
 - **Real-Time Statistics** - Total QSOs, DXCC Worked, DXCC Confirmed, Confirmation Rate
 - **Filter-Aware Dashboard** - Statistics update dynamically when filters are active
@@ -104,14 +112,19 @@ The optimized build will be in the `dist/` directory.
    - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, and confirmation percentage
    - All statistics update dynamically when filters are applied
 
-3. **Explore Your Data**
+3. **Visualize Your Progress**
+   - Click "Show Charts" to reveal interactive charts
+   - View DXCC breakdown by continent, band activity, confirmation platforms, and band × continent heatmap
+   - Charts update dynamically as you apply filters
+
+4. **Explore Your Data**
    - Use the search bar to find specific countries or DXCC entities
    - Filter by status, mode, operator, continent, confirmation platform, or band
    - Combine multiple filters for detailed analysis
    - Sort any column by clicking its header
    - Navigate through pages (15 entries per page)
 
-4. **Export & Print Results**
+5. **Export & Print Results**
    - Click "Export CSV" to download your filtered analysis as spreadsheet (includes filter info)
    - Click "Print Report" to generate a professional print-friendly report
    - Save as PDF using your browser's print dialog
@@ -161,6 +174,7 @@ These fields are automatically recognized alongside standard ADIF fields.
 - **React 18** - Modern UI framework with hooks
 - **Vite** - Lightning-fast build tool and dev server
 - **Tailwind CSS** - Utility-first CSS framework
+- **Recharts** - Composable charting library built on React and D3
 - **Lucide React** - Beautiful, consistent icons
 - **JavaScript ES6+** - Modern JavaScript features
 
@@ -201,8 +215,9 @@ The application uses a **single-file component architecture** for the main analy
 1. **ADIF Parser** - Regex-based extraction of ADIF tags
 2. **Analysis Engine** - Band matrix calculation with per-band/per-platform QSO tracking and confirmation logic
 3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-4. **React Components** - UI rendering with hooks for state management
-5. **Export Module** - CSV generation from filtered data with filter info header
+4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band × continent heatmap data
+5. **React Components** - UI rendering with hooks for state management
+6. **Export Module** - CSV generation from filtered data with filter info header
 
 See `CLAUDE.md` for detailed architecture documentation.
 
@@ -260,7 +275,7 @@ For questions, issues, or feature requests, please open an issue on GitHub.
 
 Future enhancements under consideration:
 - [ ] Additional band support (6m, 2m, 70cm, etc.)
-- [ ] Visual charts and graphs (continent breakdown, band activity)
+- [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
 - [x] Print-friendly report generation
