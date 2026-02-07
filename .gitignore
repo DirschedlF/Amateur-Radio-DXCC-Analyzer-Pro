@@ -18,6 +18,9 @@ dist-ssr
 # Local documentation
 .doc/
 
+# Test data
+.testdata/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

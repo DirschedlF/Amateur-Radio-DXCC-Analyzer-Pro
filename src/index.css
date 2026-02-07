@@ -95,12 +95,15 @@ body {
   /* Table styling */
   table {
     border-collapse: collapse;
+    width: 100% !important;
+    font-size: 9px !important;
   }
 
   th, td {
     border: 1px solid #d1d5db !important;
-    padding: 8px !important;
+    padding: 3px 4px !important;
     color: black !important;
+    white-space: nowrap;
   }
 
   th {
@@ -108,14 +111,28 @@ body {
     font-weight: bold;
   }
 
+  /* Compact band status circles for print */
+  table span.inline-block {
+    width: 18px !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    font-size: 8px !important;
+  }
+
   /* Header styling */
   h1, h2, h3 {
     color: black !important;
   }
 
-  /* Add page header */
+  /* Remove max-width and overflow constraints for print */
   .container {
     position: relative;
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
   }
 
   /* Footer with callsign */

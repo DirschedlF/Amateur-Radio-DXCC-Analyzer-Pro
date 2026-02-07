@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3 } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC } from '../utils/dxccEntities'
 
@@ -11,6 +11,7 @@ import { lookupDXCC } from '../utils/dxccEntities'
  */
 function DXCCAnalyzer() {
   const [logData, setLogData] = useState(null)
+  const [fileName, setFileName] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all') // 'all', 'confirmed', 'worked'
   const [filterMode, setFilterMode] = useState('all') // 'all', 'ssb', 'cw', 'digital'
@@ -22,10 +23,10 @@ function DXCCAnalyzer() {
   const [sortDirection, setSortDirection] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [showCharts, setShowCharts] = useState(false)
-  const itemsPerPage = 15
+  const [itemsPerPage, setItemsPerPage] = useState(15)
 
   // Supported bands
-  const BANDS = ['80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m']
+  const BANDS = ['160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
 
   // Mode categories (HF modes only - VHF/UHF modes like FM, DMR excluded)
   const MODE_CATEGORIES = {
@@ -248,6 +249,7 @@ function DXCCAnalyzer() {
     const file = event.target.files[0]
     if (!file) return
 
+    setFileName(file.name)
     const reader = new FileReader()
 
     reader.onload = (e) => {
@@ -537,11 +539,14 @@ function DXCCAnalyzer() {
   }
 
   // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  const showAll = itemsPerPage === 0
+  const totalPages = showAll ? 1 : Math.ceil(filteredData.length / itemsPerPage)
+  const paginatedData = showAll
+    ? filteredData
+    : filteredData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+      )
 
   /**
    * Export to CSV
@@ -620,11 +625,26 @@ function DXCCAnalyzer() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-[1600px]">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
         <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.3</p>
+        {logData && fileName && (
+          <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
+            <span className="text-gray-400 text-sm">📄 {fileName}</span>
+            <label className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition text-sm">
+              <RefreshCw className="w-4 h-4" />
+              Reload
+              <input
+                type="file"
+                accept=".adi,.adif"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+        )}
       </div>
 
       {/* File Upload */}
@@ -1056,20 +1076,20 @@ function DXCCAnalyzer() {
                       QSOs {sortIndicator('qsos')}
                     </th>
                     {BANDS.map(band => (
-                      <th key={band} className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort(band)}>
+                      <th key={band} className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort(band)}>
                         {band} {sortIndicator(band)}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('lotw')} title="Logbook of the World">
+                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('lotw')} title="Logbook of the World">
                       LOTW {sortIndicator('lotw')}
                     </th>
-                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('eqsl')} title="eQSL.cc">
+                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('eqsl')} title="eQSL.cc">
                       eQSL {sortIndicator('eqsl')}
                     </th>
-                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qrz')} title="QRZ.com">
+                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qrz')} title="QRZ.com">
                       QRZ {sortIndicator('qrz')}
                     </th>
-                    <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qsl')} title="Paper QSL">
+                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qsl')} title="Paper QSL">
                       Paper {sortIndicator('qsl')}
                     </th>
                   </tr>
@@ -1088,7 +1108,7 @@ function DXCCAnalyzer() {
                       {BANDS.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         return (
-                          <td key={band} className="px-4 py-3 text-center">
+                          <td key={band} className="px-2 py-3 text-center">
                             {status === 'C' && (
                               <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
                             )}
@@ -1098,10 +1118,10 @@ function DXCCAnalyzer() {
                           </td>
                         )
                       })}
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
                     </tr>
                   ))}
                   {/* Print all data */}
@@ -1117,7 +1137,7 @@ function DXCCAnalyzer() {
                       {BANDS.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         return (
-                          <td key={band} className="px-4 py-3 text-center">
+                          <td key={band} className="px-2 py-3 text-center">
                             {status === 'C' && (
                               <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
                             )}
@@ -1127,10 +1147,10 @@ function DXCCAnalyzer() {
                           </td>
                         )
                       })}
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
-                      <td className="px-4 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
+                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1139,32 +1159,52 @@ function DXCCAnalyzer() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-6 print:hidden">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-600 transition"
+          <div className="flex justify-center items-center gap-4 mt-6 print:hidden">
+            {!showAll && totalPages > 1 && (
+              <>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-600 transition"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-600 transition"
+                >
+                  Next
+                </button>
+              </>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 text-sm">Show</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition text-sm"
               >
-                Previous
-              </button>
-              <span className="px-4 py-2">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-600 transition"
-              >
-                Next
-              </button>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={0}>All</option>
+              </select>
+              <span className="text-gray-400 text-sm">per page</span>
             </div>
-          )}
+          </div>
 
           {/* Reset */}
           <div className="text-center mt-6 print:hidden">
             <button
-              onClick={() => setLogData(null)}
+              onClick={() => { setLogData(null); setFileName('') }}
               className="text-gray-400 hover:text-white transition underline"
             >
               Upload Different File

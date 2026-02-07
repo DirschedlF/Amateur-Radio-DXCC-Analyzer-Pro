@@ -78,7 +78,7 @@ A QSO is **confirmed** if ANY of these fields contains `Y` or `V`:
 
 ### Band Matrix
 
-**Supported Bands**: 40m, 30m, 20m, 17m, 15m, 12m, 10m
+**Supported Bands**: 160m, 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m
 
 **Status Values**:
 - `'C'` (Confirmed) - At least one confirmed QSO on this band for the DXCC entity
@@ -98,13 +98,16 @@ A QSO is **confirmed** if ANY of these fields contains `Y` or `V`:
     "qrz": "boolean",     // Has QRZ.com confirmation
     "qsl": "boolean",     // Has paper QSL confirmation
     "bands": {
+      "160m": "C | W | null",
+      "80m": "C | W | null",
       "40m": "C | W | null",
       "30m": "C | W | null",
       "20m": "C | W | null",
       "17m": "C | W | null",
       "15m": "C | W | null",
       "12m": "C | W | null",
-      "10m": "C | W | null"
+      "10m": "C | W | null",
+      "6m": "C | W | null"
     }
   }
 }

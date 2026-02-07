@@ -16,7 +16,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Secure by Design** - Uses browser's FileReader API for local file access
 
 ### Comprehensive Analysis
-- **Multi-Band Tracking** - Analyze 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m bands
+- **Multi-Band Tracking** - Analyze 160m, 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m bands
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
@@ -31,7 +31,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Operator Filter** - Filter by station callsign (e.g. DK9RC vs. 9A/DK9RC), shown only when multiple callsigns are present in the log
 - **Continent Filter** - Filter by continent (EU, NA, AF, SA, AS, OC)
 - **Confirmation Platform Filter** - Filter by LOTW, eQSL, QRZ, or Paper
-- **Band Filter** - Focus analysis on a single band (80m-10m)
+- **Band Filter** - Focus analysis on a single band (160m-6m)
 - **Active Filter Tags** - Visual chips showing active filters with individual remove buttons and "Reset All"
 - **Intelligent Filter Interaction** - Filters work together contextually: band status respects platform filter, confirmation checkmarks respect band filter, QSO counts respect both
 
@@ -58,7 +58,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Sticky Headers** - Keep columns visible while scrolling
 - **Sticky Country Column** - Keep country names visible when scrolling horizontally
 - **Responsive Design** - Works on desktop, tablet, and mobile devices
-- **Pagination** - 15 entries per page with navigation controls
+- **Configurable Pagination** - Choose 10, 15, 25, 50, or All entries per page
+- **File Info & Reload** - Displays loaded filename with quick reload button for re-importing
 
 ### High Performance
 - **Optimized for Large Logs** - Tested with 180,000+ QSOs with smooth performance
@@ -124,7 +125,7 @@ The optimized build will be in the `dist/` directory.
    - Filter by status, mode, operator, continent, confirmation platform, or band
    - Combine multiple filters for detailed analysis
    - Sort any column by clicking its header
-   - Navigate through pages (15 entries per page)
+   - Navigate through pages and adjust entries per page (10/15/25/50/All)
 
 5. **Export & Print Results**
    - Click "Export CSV" to download your filtered analysis as spreadsheet (includes filter info)
@@ -234,7 +235,7 @@ See `CLAUDE.md` for detailed architecture documentation.
 
 - **Optimized Parsing**: Efficient regex patterns avoid backtracking
 - **Memoized Calculations**: `useMemo` prevents unnecessary re-renders
-- **Pagination**: Default 15 items per page keeps DOM size manageable
+- **Pagination**: Configurable items per page (default 15) keeps DOM size manageable
 - **Incremental Rendering**: Large logs are processed without blocking the UI
 
 Tested with logs containing over 180,000 QSOs with smooth performance.
@@ -283,7 +284,7 @@ For questions, issues, or feature requests, please open an issue on GitHub.
 ## Roadmap
 
 Future enhancements under consideration:
-- [ ] Additional band support (6m, 2m, 70cm, etc.)
+- [x] 160m and 6m band support
 - [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
 - [x] Built-in DXCC entity lookup table with deleted entity detection
 - [x] WaveLog QRZ.com confirmation field support
@@ -291,7 +292,7 @@ Future enhancements under consideration:
 - [ ] Multi-file comparison
 - [x] Print-friendly report generation
 - [x] Mode-specific analysis (SSB, CW, Digital)
-- [x] 80m band support
+- [x] 80m, 160m, 6m band support
 - [x] Column sorting with smart default directions
 - [x] Continent filter
 - [x] Confirmation platform filter (LOTW, eQSL, QRZ, Paper)
@@ -303,6 +304,8 @@ Future enhancements under consideration:
 - [x] Results counter
 - [x] CSV export with filter info
 - [x] Print-only filter summary
+- [x] Configurable pagination (10/15/25/50/All)
+- [x] Filename display with reload button
 
 ---
 
