@@ -200,7 +200,7 @@ Country names and continents are automatically resolved from the built-in DXCC l
 ## Technology Stack
 
 - **React 18** - Modern UI framework with hooks
-- **Vite** - Lightning-fast build tool and dev server
+- **Vite 7** - Lightning-fast build tool and dev server
 - **Tailwind CSS** - Utility-first CSS framework
 - **Recharts** - Composable charting library built on React and D3
 - **Lucide React** - Beautiful, consistent icons
