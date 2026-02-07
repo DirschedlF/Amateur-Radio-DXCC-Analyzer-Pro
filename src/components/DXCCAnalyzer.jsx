@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
@@ -23,6 +23,8 @@ function DXCCAnalyzer() {
   const [sortDirection, setSortDirection] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [showCharts, setShowCharts] = useState(false)
+  const [printMode, setPrintMode] = useState('none') // 'none' | 'charts' | 'report'
+  const containerRef = useRef(null)
   const [itemsPerPage, setItemsPerPage] = useState(15)
   const [filterDatePreset, setFilterDatePreset] = useState('all') // 'all', 'thisyear', 'lastyear', 'last12m', 'custom'
   const [filterDateFrom, setFilterDateFrom] = useState('')   // 'YYYY-MM-DD' format for <input type="date">
@@ -778,11 +780,61 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Print report
+   * Print charts only (2x2 grid, no table)
    */
-  const handlePrint = () => {
-    window.print()
+  const handlePrintCharts = () => {
+    setPrintMode('charts')
   }
+
+  /**
+   * Print full report (optionally with charts if visible)
+   */
+  const handlePrintReport = () => {
+    if (showCharts && chartData) {
+      setPrintMode('report')
+    } else {
+      window.print()
+    }
+  }
+
+  // Print orchestration: when printMode changes, render print charts then trigger window.print()
+  useEffect(() => {
+    if (printMode === 'none') return
+
+    // Set data-print-mode attribute immediately so CSS rules apply
+    if (containerRef.current) {
+      containerRef.current.dataset.printMode = printMode
+    }
+
+    // Wait for React to re-render with new height, then wait for Recharts SVG animation
+    const frameId = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Give Recharts enough time to fully recalculate and render SVG bars at new height
+        const timerId = setTimeout(() => {
+          const cleanup = () => {
+            setPrintMode('none')
+            if (containerRef.current) {
+              delete containerRef.current.dataset.printMode
+            }
+          }
+
+          window.addEventListener('afterprint', cleanup, { once: true })
+          window.print()
+
+          // Fallback cleanup if afterprint doesn't fire
+          setTimeout(() => {
+            if (containerRef.current?.dataset.printMode) {
+              cleanup()
+            }
+          }, 1000)
+        }, 500)
+
+        return () => clearTimeout(timerId)
+      })
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [printMode])
 
   /**
    * Handle column sort
@@ -807,7 +859,7 @@ function DXCCAnalyzer() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-[1600px]">
+    <div ref={containerRef} className="container mx-auto px-4 py-8 max-w-[1600px]">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
@@ -902,7 +954,7 @@ function DXCCAnalyzer() {
           </div>
 
           {/* Charts Toggle */}
-          <div className="mb-4 print:hidden">
+          <div className="mb-4 print:hidden flex gap-2">
             <button
               onClick={() => setShowCharts(prev => !prev)}
               className={`px-4 py-2 rounded-lg transition flex items-center gap-2 ${
@@ -912,19 +964,28 @@ function DXCCAnalyzer() {
               <BarChart3 className="w-5 h-5" />
               {showCharts ? 'Hide Charts' : 'Show Charts'}
             </button>
+            {showCharts && chartData && (
+              <button
+                onClick={handlePrintCharts}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg transition flex items-center gap-2"
+              >
+                <Printer className="w-5 h-5" />
+                Print Charts
+              </button>
+            )}
           </div>
 
           {/* Charts Section */}
           {showCharts && chartData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
+            <div className={`chart-section grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 ${printMode === 'none' ? 'print:hidden' : ''}`}>
               {/* Continent Breakdown - Stacked Bar Chart */}
               <div className="bg-gray-800 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3 text-center">DXCC by Continent</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.continentData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <ResponsiveContainer width="100%" height={printMode !== 'none' ? 195 : 300}>
+                  <BarChart data={chartData.continentData} margin={printMode !== 'none' ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 5, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} allowDecimals={false} width={printMode !== 'none' ? 30 : 60} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
@@ -942,11 +1003,11 @@ function DXCCAnalyzer() {
               {/* Band Activity - Stacked Bar Chart */}
               <div className="bg-gray-800 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3 text-center">Band Activity</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.bandData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <ResponsiveContainer width="100%" height={printMode !== 'none' ? 195 : 300}>
+                  <BarChart data={chartData.bandData} margin={printMode !== 'none' ? { top: 5, right: 5, left: -10, bottom: 5 } : { top: 5, right: 20, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} />
-                    <YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} />
+                    <YAxis tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} allowDecimals={false} width={printMode !== 'none' ? 30 : 60} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
@@ -964,11 +1025,11 @@ function DXCCAnalyzer() {
               {/* Confirmation Platforms - Horizontal Bar Chart */}
               <div className="bg-gray-800 rounded-lg p-4">
                 <h3 className="text-lg font-semibold mb-3 text-center">Confirmation Platforms</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.platformData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <ResponsiveContainer width="100%" height={printMode !== 'none' ? 195 : 300}>
+                  <BarChart data={chartData.platformData} layout="vertical" margin={printMode !== 'none' ? { top: 5, right: 5, left: 0, bottom: 5 } : { top: 5, right: 20, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} width={50} />
+                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }} width={printMode !== 'none' ? 35 : 50} />
                     <Tooltip
                       contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
@@ -1046,7 +1107,7 @@ function DXCCAnalyzer() {
 
           {/* Print-only filter summary */}
           {hasActiveFilters && (
-            <div className="hidden print:block text-sm mb-4 border-b border-gray-300 pb-2">
+            <div className="print-filter-summary hidden print:block text-sm mb-4 border-b border-gray-300 pb-2">
               Filtered by: {[
                 filterMode !== 'all' && `Mode: ${activeFilterLabels.mode[filterMode]}`,
                 filterOperator !== 'all' && `Operator: ${filterOperator}`,
@@ -1304,7 +1365,7 @@ function DXCCAnalyzer() {
             </button>
 
             <button
-              onClick={handlePrint}
+              onClick={handlePrintReport}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition flex items-center gap-2 print:hidden"
             >
               <Printer className="w-5 h-5" />
@@ -1318,7 +1379,7 @@ function DXCCAnalyzer() {
           </div>
 
           {/* Table */}
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div className="dxcc-table-wrapper bg-gray-800 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-900 sticky top-0">
