@@ -478,7 +478,15 @@ function DXCCAnalyzer() {
     // Determine base entries based on status filter
     let entries
     if (filterStatus === 'notworked') {
-      entries = [...missingDXCC]
+      if (filterBand !== 'all') {
+        // Band filter active: "not worked" means not worked ON THIS BAND
+        // Include globally missing + analyzed entities without activity on this band
+        const notWorkedOnBand = Object.entries(analyzedData)
+          .filter(([_, data]) => data.bands[filterBand] === null)
+        entries = [...missingDXCC, ...notWorkedOnBand]
+      } else {
+        entries = [...missingDXCC]
+      }
     } else if (filterStatus === 'allentities') {
       entries = [...Object.entries(analyzedData), ...missingDXCC]
     } else {
@@ -499,7 +507,7 @@ function DXCCAnalyzer() {
       entries = entries.filter(([_, data]) => data.cont === filterContinent)
     }
 
-    // Apply band filter (skip for notworked - they have no bands)
+    // Apply band filter (skip for notworked - already handled above)
     if (filterBand !== 'all' && filterStatus !== 'notworked') {
       entries = entries.filter(([_, data]) =>
         data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
