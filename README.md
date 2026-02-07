@@ -48,6 +48,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Band × Continent Heatmap** - Color-intensity grid revealing gaps in your DXCC coverage
 - **Filter-Reactive** - All charts update dynamically when filters are applied
 - **Collapsible** - Toggle charts on/off via "Show Charts" button
+- **Print Charts** - Dedicated button to print all 4 charts in a 2×2 grid on a single A4 landscape page
+- **Charts in Print Report** - When charts are visible, "Print Report" includes charts as the first page before the data table
 
 ### Interactive Dashboard
 - **Real-Time Statistics** - Total QSOs, DXCC Worked, DXCC Confirmed, DXCC Missing, Confirmation Rate
@@ -73,7 +75,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 
 ### Export & Print
 - **CSV Export** - Download your analysis with current filters applied and filter info header
-- **Print Report** - Professional print-friendly reports (A4 landscape)
+- **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page
+- **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
 - **PDF Generation** - Save reports as PDF via browser print dialog
 - **Print-Only Filter Summary** - Active filters displayed in printed output
 - **Preserved Filters** - Export and print respect all active filters including context-sensitive QSO counts and band status
@@ -143,7 +146,8 @@ The optimized build will be in the `dist/` directory.
 
 5. **Export & Print Results**
    - Click "Export CSV" to download your filtered analysis as spreadsheet (includes filter info)
-   - Click "Print Report" to generate a professional print-friendly report
+   - Click "Print Charts" to print the 4 charts on a single A4 page
+   - Click "Print Report" to generate a professional print-friendly report (includes charts as first page when visible)
    - Save as PDF using your browser's print dialog
    - All exports and prints respect your current filters with context-sensitive data
 
@@ -326,6 +330,7 @@ Future enhancements under consideration:
 - [x] DXCC Missing dashboard counter
 - [x] Continent lookup table priority over ADIF data for reliability
 - [x] Unfiltered totals comparison in dashboard ("of X total")
+- [x] Printable charts (dedicated "Print Charts" button + charts in Print Report)
 
 ---
 
