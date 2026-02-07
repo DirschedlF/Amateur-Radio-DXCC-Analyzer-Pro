@@ -423,4 +423,14 @@ export function lookupDXCC(code) {
   return { name: entry[0], cont: entry[1], deleted: entry[2] }
 }
 
+/**
+ * Get all active (non-deleted) DXCC entities
+ * @returns {Array<{ id: string, name: string, cont: string }>}
+ */
+export function getAllActiveDXCC() {
+  return Object.entries(DXCC_ENTITIES)
+    .filter(([_, entry]) => !entry[2]) // exclude deleted
+    .map(([id, entry]) => ({ id, name: entry[0], cont: entry[1] }))
+}
+
 export default DXCC_ENTITIES

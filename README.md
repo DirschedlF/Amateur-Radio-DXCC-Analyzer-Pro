@@ -26,7 +26,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 
 ### Advanced Filtering System
 - **Search** - Filter by country name or DXCC ID
-- **Status Filter** - View All / Confirmed Only / Worked Only
+- **Status Filter** - View All / Confirmed Only / Worked Only / Not Worked / All Entities
 - **Mode Filter** - Filter by operating mode (SSB, CW, Digital)
 - **Operator Filter** - Filter by station callsign (e.g. DK9RC vs. 9A/DK9RC), shown only when multiple callsigns are present in the log
 - **Continent Filter** - Filter by continent (EU, NA, AF, SA, AS, OC)
@@ -50,9 +50,12 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Collapsible** - Toggle charts on/off via "Show Charts" button
 
 ### Interactive Dashboard
-- **Real-Time Statistics** - Total QSOs, DXCC Worked, DXCC Confirmed, Confirmation Rate
-- **Filter-Aware Dashboard** - Statistics update dynamically when filters are active
-- **Comparison Display** - Shows "of X total" when filtered values differ from overall totals
+- **Real-Time Statistics** - Total QSOs, DXCC Worked, DXCC Confirmed, DXCC Missing, Confirmation Rate
+- **DXCC Missing Counter** - Shows how many active DXCC entities have not yet been worked (filter-aware)
+- **Not Worked View** - Display only the DXCC entities you haven't worked yet
+- **All Entities View** - Combined view of worked and not-worked entities for a complete DXCC overview
+- **Filter-Aware Dashboard** - All five statistics update dynamically when filters are active
+- **Comparison Display** - Shows "of X total" with absolute unfiltered totals when filters narrow the results
 - **Results Counter** - "Showing X of Y entities" below the controls
 
 ### Modern Interface
@@ -121,8 +124,9 @@ The optimized build will be in the `dist/` directory.
    - Supported formats: ADIF 3.x.x (standard amateur radio interchange format)
 
 2. **View Your Statistics**
-   - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, and confirmation percentage
+   - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, DXCC Missing, and Confirmation Rate
    - All statistics update dynamically when filters are applied
+   - "of X total" comparison shows absolute unfiltered values when filters are active
 
 3. **Visualize Your Progress**
    - Click "Show Charts" to reveal interactive charts
@@ -131,7 +135,7 @@ The optimized build will be in the `dist/` directory.
 
 4. **Explore Your Data**
    - Use the search bar to find specific countries or DXCC entities
-   - Filter by status, mode, operator, continent, confirmation platform, band, or date range
+   - Filter by status (All/Confirmed/Worked Only/Not Worked/All Entities), mode, operator, continent, confirmation platform, band, or date range
    - Use date presets (This Year, Last Year, Last 12 Months) or set a custom date range
    - Combine multiple filters for detailed analysis
    - Sort any column by clicking its header
@@ -318,6 +322,10 @@ Future enhancements under consideration:
 - [x] Configurable pagination (10/15/25/50/All)
 - [x] Filename display with reload button
 - [x] Date range filter with presets and custom range
+- [x] Not Worked / All Entities status views
+- [x] DXCC Missing dashboard counter
+- [x] Continent lookup table priority over ADIF data for reliability
+- [x] Unfiltered totals comparison in dashboard ("of X total")
 
 ---
 

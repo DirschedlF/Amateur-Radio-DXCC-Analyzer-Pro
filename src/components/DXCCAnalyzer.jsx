@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { lookupDXCC } from '../utils/dxccEntities'
+import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -216,10 +216,11 @@ function DXCCAnalyzer() {
       const band = qso.BAND
       const confirmed = isConfirmed(qso)
 
-      // Resolve country and continent: ADIF fields first, then DXCC lookup table fallback
+      // Resolve country and continent: lookup table preferred for continent (more reliable),
+      // ADIF preferred for country name (user may have custom names)
       const dxccLookup = lookupDXCC(dxccId)
       const country = qso.COUNTRY || dxccLookup?.name || 'Unknown'
-      const continent = qso.CONT || dxccLookup?.cont || ''
+      const continent = dxccLookup?.cont || qso.CONT || ''
       const deleted = dxccLookup?.deleted || false
 
       // Initialize DXCC entry if not exists
@@ -349,6 +350,19 @@ function DXCCAnalyzer() {
     return analyzeQSOs(logData.qsos, filterMode, filterOperator, from, to)
   }, [logData, filterMode, filterOperator, filterDatePreset, filterDateFrom, filterDateTo])
 
+  // Unfiltered stats: absolute totals across all modes/operators/dates (for "of X total" display)
+  const unfilteredStats = useMemo(() => {
+    if (!logData) return null
+    const allData = analyzeQSOs(logData.qsos)
+    const dxccEntries = Object.entries(allData)
+    const worked = dxccEntries.length
+    const confirmed = dxccEntries.filter(([_, data]) =>
+      BANDS.some(band => data.bands[band] === 'C')
+    ).length
+    const totalQSOs = dxccEntries.reduce((sum, [_, data]) => sum + data.total, 0)
+    return { totalQSOs, worked, confirmed, percentage: worked > 0 ? ((confirmed / worked) * 100).toFixed(1) : 0 }
+  }, [logData])
+
   // Calculate statistics
   const stats = useMemo(() => {
     if (!analyzedData) return null
@@ -362,22 +376,71 @@ function DXCCAnalyzer() {
     // Calculate total QSOs for current mode filter
     const totalQSOs = dxccEntries.reduce((sum, [_, data]) => sum + data.total, 0)
 
+    // Count missing: active entities from lookup table that are NOT in the analyzed data
+    const allActive = getAllActiveDXCC()
+    const totalActive = allActive.length
+    const workedIds = new Set(Object.keys(analyzedData))
+    const missing = allActive.filter(entity => !workedIds.has(entity.id)).length
+
     return {
       totalQSOs,
       worked,
       confirmed,
+      missing,
+      totalActive,
       percentage: worked > 0 ? ((confirmed / worked) * 100).toFixed(1) : 0
     }
   }, [analyzedData])
 
-  // Derive available continents from data
+  // Derive available continents from data (include all continents when showing missing/all entities)
   const availableContinents = useMemo(() => {
-    if (!analyzedData) return []
     const continents = new Set()
-    Object.values(analyzedData).forEach(data => {
-      if (data.cont) continents.add(data.cont)
+    if (analyzedData) {
+      Object.values(analyzedData).forEach(data => {
+        if (data.cont) continents.add(data.cont)
+      })
+    }
+    // Always include all continents from lookup table for not-worked/all-entities modes
+    getAllActiveDXCC().forEach(entity => {
+      if (entity.cont) continents.add(entity.cont)
     })
     return [...continents].sort()
+  }, [analyzedData])
+
+  // Build "not worked" DXCC entries (entities from lookup table not in analyzed data)
+  const missingDXCC = useMemo(() => {
+    const allActive = getAllActiveDXCC()
+    const workedIds = analyzedData ? new Set(Object.keys(analyzedData)) : new Set()
+
+    return allActive
+      .filter(entity => !workedIds.has(entity.id))
+      .map(entity => {
+        const emptyBands = {}
+        const emptyBandQsos = {}
+        const emptyBandConfirmations = {}
+        const emptyBandPlatformQsos = {}
+        BANDS.forEach(b => {
+          emptyBands[b] = null
+          emptyBandQsos[b] = 0
+          emptyBandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
+          emptyBandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+        })
+        return [entity.id, {
+          country: entity.name,
+          cont: entity.cont,
+          deleted: false,
+          total: 0,
+          lotw: false,
+          eqsl: false,
+          qrz: false,
+          qsl: false,
+          bands: emptyBands,
+          bandQsos: emptyBandQsos,
+          bandConfirmations: emptyBandConfirmations,
+          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
+          bandPlatformQsos: emptyBandPlatformQsos
+        }]
+      })
   }, [analyzedData])
 
   // Get display QSO count (respects band and confirmation filters)
@@ -412,7 +475,15 @@ function DXCCAnalyzer() {
   const filteredData = useMemo(() => {
     if (!analyzedData) return []
 
-    let entries = Object.entries(analyzedData)
+    // Determine base entries based on status filter
+    let entries
+    if (filterStatus === 'notworked') {
+      entries = [...missingDXCC]
+    } else if (filterStatus === 'allentities') {
+      entries = [...Object.entries(analyzedData), ...missingDXCC]
+    } else {
+      entries = Object.entries(analyzedData)
+    }
 
     // Apply search filter
     if (searchTerm) {
@@ -428,15 +499,15 @@ function DXCCAnalyzer() {
       entries = entries.filter(([_, data]) => data.cont === filterContinent)
     }
 
-    // Apply band filter
-    if (filterBand !== 'all') {
+    // Apply band filter (skip for notworked - they have no bands)
+    if (filterBand !== 'all' && filterStatus !== 'notworked') {
       entries = entries.filter(([_, data]) =>
         data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
       )
     }
 
-    // Apply confirmation platform filter (respects band filter)
-    if (filterConfirmation !== 'all') {
+    // Apply confirmation platform filter (skip for notworked)
+    if (filterConfirmation !== 'all' && filterStatus !== 'notworked') {
       if (filterBand !== 'all') {
         entries = entries.filter(([_, data]) => data.bandConfirmations[filterBand]?.[filterConfirmation] === true)
       } else {
@@ -456,6 +527,7 @@ function DXCCAnalyzer() {
         bandsToCheck.some(band => data.bands[band] === 'W')
       )
     }
+    // 'notworked' and 'allentities' need no additional status filtering here
 
     // Sort
     return entries.sort((a, b) => {
@@ -484,37 +556,57 @@ function DXCCAnalyzer() {
 
       return sortDirection === 'asc' ? comparison : -comparison
     })
-  }, [analyzedData, searchTerm, filterStatus, filterContinent, filterConfirmation, filterBand, sortColumn, sortDirection])
+  }, [analyzedData, missingDXCC, searchTerm, filterStatus, filterContinent, filterConfirmation, filterBand, sortColumn, sortDirection])
 
   // Check if any filter is active
   const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all' || filterDatePreset !== 'all'
 
   // Calculate filtered statistics (based on what's shown in the table)
   const filteredStats = useMemo(() => {
-    if (!filteredData.length) return { totalQSOs: 0, worked: 0, confirmed: 0, percentage: 0 }
+    if (!filteredData.length) return { totalQSOs: 0, worked: 0, confirmed: 0, missing: stats?.totalActive || 0, percentage: 0 }
 
     const bandsToCheck = filterBand !== 'all' ? [filterBand] : BANDS
-    const worked = filteredData.length
-    const confirmed = filteredData.filter(([_, data]) =>
+    // Only count entities that have actual QSOs (exclude not-worked entries)
+    const workedEntries = filteredData.filter(([_, data]) => data.total > 0)
+    const worked = workedEntries.length
+    const confirmed = workedEntries.filter(([_, data]) =>
       bandsToCheck.some(band => data.bands[band] === 'C')
     ).length
-    const totalQSOs = filteredData.reduce((sum, [_, data]) => sum + getDisplayQsos(data), 0)
+    const totalQSOs = workedEntries.reduce((sum, [_, data]) => sum + getDisplayQsos(data), 0)
+
+    // Calculate missing: for band filter, count entities NOT worked on that specific band
+    // For other filters, count how many active entities are not in the filtered worked set
+    let missing = stats?.missing || 0
+    if (filterBand !== 'all' && analyzedData) {
+      // Count entities from ALL analyzed data that have activity on this band
+      const workedOnBand = Object.values(analyzedData).filter(data => data.bands[filterBand] !== null).length
+      missing = (stats?.totalActive || 0) - workedOnBand
+    } else if (hasActiveFilters && analyzedData) {
+      // For other post-analysis filters (continent, search, etc.), use worked count from filtered data
+      missing = (stats?.totalActive || 0) - worked
+    }
 
     return {
       totalQSOs,
       worked,
       confirmed,
+      missing: Math.max(0, missing),
       percentage: worked > 0 ? ((confirmed / worked) * 100).toFixed(1) : 0
     }
-  }, [filteredData, filterBand, filterConfirmation])
+  }, [filteredData, filterBand, filterConfirmation, stats, analyzedData, hasActiveFilters])
 
-  // Chart data aggregation
+  // Chart data aggregation (only for entities with actual QSOs)
   const chartData = useMemo(() => {
     if (!filteredData.length) return null
+    if (filterStatus === 'notworked') return null
+
+    // Use only worked entries for charts (exclude not-worked entities in allentities mode)
+    const chartEntries = filteredData.filter(([_, data]) => data.total > 0)
+    if (!chartEntries.length) return null
 
     // Continent breakdown
     const contMap = {}
-    filteredData.forEach(([_, data]) => {
+    chartEntries.forEach(([_, data]) => {
       const cont = data.cont || 'Unknown'
       if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
       contMap[cont].worked++
@@ -532,7 +624,7 @@ function DXCCAnalyzer() {
     const bandData = bandsToShow.map(band => {
       let confirmed = 0
       let workedOnly = 0
-      filteredData.forEach(([_, data]) => {
+      chartEntries.forEach(([_, data]) => {
         const status = getDisplayBandStatus(data, band)
         if (status === 'C') confirmed++
         else if (status === 'W') workedOnly++
@@ -542,7 +634,7 @@ function DXCCAnalyzer() {
 
     // Platform comparison
     const platformCounts = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
-    filteredData.forEach(([_, data]) => {
+    chartEntries.forEach(([_, data]) => {
       if (filterBand !== 'all') {
         if (data.bandConfirmations[filterBand]?.lotw) platformCounts.lotw++
         if (data.bandConfirmations[filterBand]?.eqsl) platformCounts.eqsl++
@@ -563,13 +655,13 @@ function DXCCAnalyzer() {
     ]
 
     // Band x Continent heatmap (respects all filters)
-    const allConts = [...new Set(filteredData.map(([_, d]) => d.cont).filter(Boolean))].sort()
+    const allConts = [...new Set(chartEntries.map(([_, d]) => d.cont).filter(Boolean))].sort()
     const heatmapData = allConts.map(cont => {
       const row = { continent: cont }
       bandsToShow.forEach(band => {
         let confirmed = 0
         let worked = 0
-        filteredData.forEach(([_, data]) => {
+        chartEntries.forEach(([_, data]) => {
           if (data.cont !== cont) return
           const status = getDisplayBandStatus(data, band)
           if (status === 'C') confirmed++
@@ -583,7 +675,7 @@ function DXCCAnalyzer() {
     })
 
     return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
-  }, [filteredData, filterBand, filterConfirmation])
+  }, [filteredData, filterStatus, filterBand, filterConfirmation])
 
   // Reset all filters
   const resetAllFilters = () => {
@@ -614,7 +706,7 @@ function DXCCAnalyzer() {
   // Active filter labels for display
   const activeFilterLabels = {
     mode: { ssb: 'SSB', cw: 'CW', digital: 'Digital' },
-    status: { confirmed: 'Confirmed', worked: 'Worked Only' },
+    status: { confirmed: 'Confirmed', worked: 'Worked Only', notworked: 'Not Worked', allentities: 'All Entities' },
     confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' },
     date: { thisyear: 'This Year', lastyear: 'Last Year', last12m: 'Last 12 Months', custom: 'Custom Range' }
   }
@@ -711,7 +803,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.5.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.5.1</p>
         {logData && fileName && (
           <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
             <span className="text-gray-400 text-sm">📄 {fileName}</span>
@@ -751,14 +843,14 @@ function DXCCAnalyzer() {
       {logData && (
         <>
           {/* Statistics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
             <div className="bg-gray-800 rounded-lg p-4">
               <div className="text-gray-400 text-sm mb-1">Total QSOs</div>
               <div className="text-3xl font-bold">
                 {hasActiveFilters ? filteredStats.totalQSOs : stats.totalQSOs}
               </div>
-              {hasActiveFilters && (
-                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.totalQSOs} total</div>
+              {hasActiveFilters && filteredStats.totalQSOs !== unfilteredStats.totalQSOs && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {unfilteredStats.totalQSOs} total</div>
               )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
@@ -766,8 +858,8 @@ function DXCCAnalyzer() {
               <div className="text-3xl font-bold text-yellow-500">
                 {hasActiveFilters ? filteredStats.worked : stats.worked}
               </div>
-              {hasActiveFilters && (
-                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.worked} total</div>
+              {hasActiveFilters && filteredStats.worked !== unfilteredStats.worked && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {unfilteredStats.worked} total</div>
               )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
@@ -775,8 +867,19 @@ function DXCCAnalyzer() {
               <div className="text-3xl font-bold text-green-500">
                 {hasActiveFilters ? filteredStats.confirmed : stats.confirmed}
               </div>
-              {hasActiveFilters && (
-                <div className="text-gray-500 text-xs mt-1 print:hidden">of {stats.confirmed} total</div>
+              {hasActiveFilters && filteredStats.confirmed !== unfilteredStats.confirmed && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">of {unfilteredStats.confirmed} total</div>
+              )}
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4">
+              <div className="text-gray-400 text-sm mb-1">DXCC Missing</div>
+              <div className="text-3xl font-bold text-red-500">
+                {hasActiveFilters ? filteredStats.missing : stats.missing}
+              </div>
+              {hasActiveFilters && filteredStats.missing !== stats.missing ? (
+                <div className="text-gray-500 text-xs mt-1">of {stats.totalActive} active</div>
+              ) : (
+                <div className="text-gray-500 text-xs mt-1">of {stats.totalActive} active</div>
               )}
             </div>
             <div className="bg-gray-800 rounded-lg p-4">
@@ -784,8 +887,8 @@ function DXCCAnalyzer() {
               <div className="text-3xl font-bold text-blue-500">
                 {hasActiveFilters ? filteredStats.percentage : stats.percentage}%
               </div>
-              {hasActiveFilters && (
-                <div className="text-gray-500 text-xs mt-1 print:hidden">overall {stats.percentage}%</div>
+              {hasActiveFilters && filteredStats.percentage !== unfilteredStats.percentage && (
+                <div className="text-gray-500 text-xs mt-1 print:hidden">overall {unfilteredStats.percentage}%</div>
               )}
             </div>
           </div>
@@ -1028,7 +1131,7 @@ function DXCCAnalyzer() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => { setFilterStatus('all'); setCurrentPage(1) }}
-                className={`px-4 py-2 rounded-lg transition ${
+                className={`px-3 py-2 rounded-lg transition text-sm ${
                   filterStatus === 'all' ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
               >
@@ -1036,7 +1139,7 @@ function DXCCAnalyzer() {
               </button>
               <button
                 onClick={() => { setFilterStatus('confirmed'); setCurrentPage(1) }}
-                className={`px-4 py-2 rounded-lg transition ${
+                className={`px-3 py-2 rounded-lg transition text-sm ${
                   filterStatus === 'confirmed' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
               >
@@ -1044,11 +1147,27 @@ function DXCCAnalyzer() {
               </button>
               <button
                 onClick={() => { setFilterStatus('worked'); setCurrentPage(1) }}
-                className={`px-4 py-2 rounded-lg transition ${
+                className={`px-3 py-2 rounded-lg transition text-sm ${
                   filterStatus === 'worked' ? 'bg-yellow-600' : 'bg-gray-700 hover:bg-gray-600'
                 }`}
               >
                 Worked Only
+              </button>
+              <button
+                onClick={() => { setFilterStatus('notworked'); setCurrentPage(1) }}
+                className={`px-3 py-2 rounded-lg transition text-sm ${
+                  filterStatus === 'notworked' ? 'bg-red-600' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                Not Worked
+              </button>
+              <button
+                onClick={() => { setFilterStatus('allentities'); setCurrentPage(1) }}
+                className={`px-3 py-2 rounded-lg transition text-sm ${
+                  filterStatus === 'allentities' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                All Entities
               </button>
             </div>
 
@@ -1187,7 +1306,7 @@ function DXCCAnalyzer() {
 
           {/* Results Counter */}
           <div className="text-gray-400 text-sm mb-2 px-1 print:hidden">
-            Showing {filteredData.length} of {Object.keys(analyzedData).length} entities
+            Showing {filteredData.length} {filterStatus === 'notworked' ? 'not worked' : filterStatus === 'allentities' ? `of ${stats.totalActive} active` : `of ${Object.keys(analyzedData).length} worked`} entities
           </div>
 
           {/* Table */}
