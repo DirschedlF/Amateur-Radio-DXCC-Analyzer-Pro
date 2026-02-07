@@ -629,7 +629,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.3</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.5</p>
         {logData && fileName && (
           <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
             <span className="text-gray-400 text-sm">📄 {fileName}</span>
