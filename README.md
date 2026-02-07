@@ -74,6 +74,14 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Print-Only Filter Summary** - Active filters displayed in printed output
 - **Preserved Filters** - Export and print respect all active filters including context-sensitive QSO counts and band status
 
+## Live Demo
+
+Try it now — no installation required:
+
+**[▶ Launch DXCC Analyzer Pro](https://dirschedlf.github.io/Amateur-Radio-DXCC-Analyzer-Pro/)**
+
+Just upload your ADIF file and start analyzing. Everything runs in your browser — no data is sent anywhere.
+
 ## Quick Start
 
 ### Prerequisites
