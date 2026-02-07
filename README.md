@@ -16,7 +16,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Secure by Design** - Uses browser's FileReader API for local file access
 
 ### Comprehensive Analysis
-- **Multi-Band Tracking** - Analyze 160m, 80m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m bands
+- **Multi-Band Tracking** - Analyze 160m, 80m, 60m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m bands
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
@@ -32,6 +32,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Continent Filter** - Filter by continent (EU, NA, AF, SA, AS, OC)
 - **Confirmation Platform Filter** - Filter by LOTW, eQSL, QRZ, or Paper
 - **Band Filter** - Focus analysis on a single band (160m-6m)
+- **Date Range Filter** - Analyze specific time periods with presets (This Year, Last Year, Last 12 Months) or custom date range
 - **Active Filter Tags** - Visual chips showing active filters with individual remove buttons and "Reset All"
 - **Intelligent Filter Interaction** - Filters work together contextually: band status respects platform filter, confirmation checkmarks respect band filter, QSO counts respect both
 
@@ -130,7 +131,8 @@ The optimized build will be in the `dist/` directory.
 
 4. **Explore Your Data**
    - Use the search bar to find specific countries or DXCC entities
-   - Filter by status, mode, operator, continent, confirmation platform, or band
+   - Filter by status, mode, operator, continent, confirmation platform, band, or date range
+   - Use date presets (This Year, Last Year, Last 12 Months) or set a custom date range
    - Combine multiple filters for detailed analysis
    - Sort any column by clicking its header
    - Navigate through pages and adjust entries per page (10/15/25/50/All)
@@ -148,6 +150,7 @@ The optimized build will be in the `dist/` directory.
 - `BAND` - Operating band
 
 ### Optional Fields
+- `QSO_DATE` - QSO date in YYYYMMDD format (for date range filtering)
 - `COUNTRY` - Country name (used as display name; resolved from built-in DXCC lookup table if missing)
 - `CONT` - Continent code (resolved from built-in DXCC lookup table if missing)
 - `MODE` - Operating mode (for mode filtering)
@@ -292,7 +295,7 @@ For questions, issues, or feature requests, please open an issue on GitHub.
 ## Roadmap
 
 Future enhancements under consideration:
-- [x] 160m and 6m band support
+- [x] 160m, 60m, and 6m band support
 - [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
 - [x] Built-in DXCC entity lookup table with deleted entity detection
 - [x] WaveLog QRZ.com confirmation field support
@@ -300,7 +303,7 @@ Future enhancements under consideration:
 - [ ] Multi-file comparison
 - [x] Print-friendly report generation
 - [x] Mode-specific analysis (SSB, CW, Digital)
-- [x] 80m, 160m, 6m band support
+- [x] 80m, 160m, 60m, 6m band support
 - [x] Column sorting with smart default directions
 - [x] Continent filter
 - [x] Confirmation platform filter (LOTW, eQSL, QRZ, Paper)
@@ -314,6 +317,7 @@ Future enhancements under consideration:
 - [x] Print-only filter summary
 - [x] Configurable pagination (10/15/25/50/All)
 - [x] Filename display with reload button
+- [x] Date range filter with presets and custom range
 
 ---
 

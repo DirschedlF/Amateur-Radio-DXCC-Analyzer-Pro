@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC } from '../utils/dxccEntities'
 
@@ -24,9 +24,12 @@ function DXCCAnalyzer() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showCharts, setShowCharts] = useState(false)
   const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [filterDatePreset, setFilterDatePreset] = useState('all') // 'all', 'thisyear', 'lastyear', 'last12m', 'custom'
+  const [filterDateFrom, setFilterDateFrom] = useState('')   // 'YYYY-MM-DD' format for <input type="date">
+  const [filterDateTo, setFilterDateTo] = useState('')       // 'YYYY-MM-DD' format for <input type="date">
 
   // Supported bands
-  const BANDS = ['160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
+  const BANDS = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
 
   // Mode categories (HF modes only - VHF/UHF modes like FM, DMR excluded)
   const MODE_CATEGORIES = {
@@ -77,6 +80,38 @@ function DXCCAnalyzer() {
     }
 
     return 'unknown'
+  }
+
+  /**
+   * Get date range boundaries for a preset
+   * @param {string} preset - Date preset: 'all', 'thisyear', 'lastyear', 'last12m', 'custom'
+   * @returns {Object} { from: 'YYYYMMDD'|null, to: 'YYYYMMDD'|null }
+   */
+  const getDateRange = (preset) => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const pad = (n) => String(n).padStart(2, '0')
+
+    switch (preset) {
+      case 'thisyear':
+        return { from: `${year}0101`, to: `${year}1231` }
+      case 'lastyear':
+        return { from: `${year - 1}0101`, to: `${year - 1}1231` }
+      case 'last12m': {
+        const toDate = `${year}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+        const fromDate = new Date(now)
+        fromDate.setFullYear(fromDate.getFullYear() - 1)
+        const fromStr = `${fromDate.getFullYear()}${pad(fromDate.getMonth() + 1)}${pad(fromDate.getDate())}`
+        return { from: fromStr, to: toDate }
+      }
+      case 'custom':
+        return {
+          from: filterDateFrom ? filterDateFrom.replace(/-/g, '') : null,
+          to: filterDateTo ? filterDateTo.replace(/-/g, '') : null
+        }
+      default: // 'all'
+        return { from: null, to: null }
+    }
   }
 
   /**
@@ -140,13 +175,15 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Analyze QSOs and build DXCC matrix (with optional mode and operator filter)
+   * Analyze QSOs and build DXCC matrix (with optional mode, operator, and date filter)
    * @param {Array} qsos - Array of QSO records
    * @param {string} modeFilter - Optional mode filter: 'all', 'ssb', 'cw', 'digital'
    * @param {string} operatorFilter - Optional operator callsign filter
+   * @param {string|null} dateFrom - Optional start date in YYYYMMDD format
+   * @param {string|null} dateTo - Optional end date in YYYYMMDD format
    * @returns {Object} DXCC analysis data
    */
-  const analyzeQSOs = (qsos, modeFilter = 'all', operatorFilter = 'all') => {
+  const analyzeQSOs = (qsos, modeFilter = 'all', operatorFilter = 'all', dateFrom = null, dateTo = null) => {
     const dxccData = {}
 
     // Filter QSOs by mode category and operator if specified
@@ -158,6 +195,17 @@ function DXCCAnalyzer() {
       filteredQsos = filteredQsos.filter(qso => {
         const call = (qso.STATION_CALLSIGN || qso.OPERATOR || '').toUpperCase()
         return call === operatorFilter
+      })
+    }
+
+    // Filter QSOs by date range if specified
+    if (dateFrom || dateTo) {
+      filteredQsos = filteredQsos.filter(qso => {
+        const d = qso.QSO_DATE
+        if (!d) return false
+        if (dateFrom && d < dateFrom) return false
+        if (dateTo && d > dateTo) return false
+        return true
       })
     }
 
@@ -277,11 +325,29 @@ function DXCCAnalyzer() {
     return [...operators].sort()
   }, [logData])
 
-  // Reanalyze data when mode or operator filter changes
+  // Extract min/max QSO dates from log data (for date input constraints)
+  const dateRange = useMemo(() => {
+    if (!logData) return { min: '', max: '' }
+    let minDate = null
+    let maxDate = null
+    logData.qsos.forEach(qso => {
+      const d = qso.QSO_DATE
+      if (d && d.length === 8) {
+        if (!minDate || d < minDate) minDate = d
+        if (!maxDate || d > maxDate) maxDate = d
+      }
+    })
+    // Convert YYYYMMDD to YYYY-MM-DD for <input type="date">
+    const toISO = (d) => d ? `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)}` : ''
+    return { min: toISO(minDate), max: toISO(maxDate) }
+  }, [logData])
+
+  // Reanalyze data when mode, operator, or date filter changes
   const analyzedData = useMemo(() => {
     if (!logData) return null
-    return analyzeQSOs(logData.qsos, filterMode, filterOperator)
-  }, [logData, filterMode, filterOperator])
+    const { from, to } = getDateRange(filterDatePreset)
+    return analyzeQSOs(logData.qsos, filterMode, filterOperator, from, to)
+  }, [logData, filterMode, filterOperator, filterDatePreset, filterDateFrom, filterDateTo])
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -421,7 +487,7 @@ function DXCCAnalyzer() {
   }, [analyzedData, searchTerm, filterStatus, filterContinent, filterConfirmation, filterBand, sortColumn, sortDirection])
 
   // Check if any filter is active
-  const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all'
+  const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all' || filterDatePreset !== 'all'
 
   // Calculate filtered statistics (based on what's shown in the table)
   const filteredStats = useMemo(() => {
@@ -528,14 +594,29 @@ function DXCCAnalyzer() {
     setFilterContinent('all')
     setFilterConfirmation('all')
     setFilterBand('all')
+    setFilterDatePreset('all')
+    setFilterDateFrom('')
+    setFilterDateTo('')
     setCurrentPage(1)
+  }
+
+  // Get human-readable date filter label
+  const getDateFilterLabel = () => {
+    if (filterDatePreset === 'all') return ''
+    if (filterDatePreset === 'custom') {
+      const from = filterDateFrom || dateRange.min || '...'
+      const to = filterDateTo || dateRange.max || '...'
+      return `${from} – ${to}`
+    }
+    return activeFilterLabels.date[filterDatePreset]
   }
 
   // Active filter labels for display
   const activeFilterLabels = {
     mode: { ssb: 'SSB', cw: 'CW', digital: 'Digital' },
     status: { confirmed: 'Confirmed', worked: 'Worked Only' },
-    confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' }
+    confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' },
+    date: { thisyear: 'This Year', lastyear: 'Last Year', last12m: 'Last 12 Months', custom: 'Custom Range' }
   }
 
   // Pagination
@@ -563,6 +644,7 @@ function DXCCAnalyzer() {
     if (filterContinent !== 'all') filters.push(`Continent: ${filterContinent}`)
     if (filterConfirmation !== 'all') filters.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
+    if (filterDatePreset !== 'all') filters.push(`Date: ${getDateFilterLabel()}`)
 
     const headers = ['DXCC ID', 'Country', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
     const rows = filteredData.map(([id, data]) => [
@@ -629,7 +711,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.4.5</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v1.5.0</p>
         {logData && fileName && (
           <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
             <span className="text-gray-400 text-sm">📄 {fileName}</span>
@@ -861,6 +943,7 @@ function DXCCAnalyzer() {
                 filterContinent !== 'all' && `Continent: ${filterContinent}`,
                 filterConfirmation !== 'all' && `Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`,
                 filterBand !== 'all' && `Band: ${filterBand}`,
+                filterDatePreset !== 'all' && `Date: ${getDateFilterLabel()}`,
                 searchTerm && `Search: "${searchTerm}"`
               ].filter(Boolean).join(' | ')}
             </div>
@@ -910,6 +993,12 @@ function DXCCAnalyzer() {
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
                   {filterBand}
                   <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterBand('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterDatePreset !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  {getDateFilterLabel()}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterDatePreset('all'); setFilterDateFrom(''); setFilterDateTo(''); setCurrentPage(1) }} />
                 </span>
               )}
               <button
@@ -1033,6 +1122,50 @@ function DXCCAnalyzer() {
                   <option key={band} value={band}>{band}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <select
+                value={filterDatePreset}
+                onChange={(e) => {
+                  const preset = e.target.value
+                  setFilterDatePreset(preset)
+                  if (preset !== 'custom') {
+                    setFilterDateFrom('')
+                    setFilterDateTo('')
+                  }
+                  setCurrentPage(1)
+                }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition"
+              >
+                <option value="all">All Time</option>
+                <option value="thisyear">This Year</option>
+                <option value="lastyear">Last Year</option>
+                <option value="last12m">Last 12 Months</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              {filterDatePreset === 'custom' && (
+                <>
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    min={dateRange.min}
+                    max={filterDateTo || dateRange.max}
+                    onChange={(e) => { setFilterDateFrom(e.target.value); setCurrentPage(1) }}
+                    className="px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <span className="text-gray-400 text-sm">–</span>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    min={filterDateFrom || dateRange.min}
+                    max={dateRange.max}
+                    onChange={(e) => { setFilterDateTo(e.target.value); setCurrentPage(1) }}
+                    className="px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </>
+              )}
             </div>
 
             <button
