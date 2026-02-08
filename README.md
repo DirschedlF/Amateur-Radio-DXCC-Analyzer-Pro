@@ -197,6 +197,22 @@ The analyzer supports QRZ.com confirmation fields from multiple logging applicat
 
 Country names and continents are automatically resolved from the built-in DXCC lookup table when ADIF files do not contain `COUNTRY` or `CONT` fields (common with Logger32, WSJT-X, N1MM, and WaveLog exports).
 
+### Tested ADIF Sources
+
+| Source | Status | Notes |
+|--------|--------|-------|
+| **Log4OM** Export | ✅ Works | Full support including Log4OM-specific QRZ fields |
+| **WaveLog** Export | ✅ Works | Country/continent resolved via built-in lookup table |
+| **QRZ.com** Export | ✅ Works | QRZ confirmation fields fully recognized |
+| **LOTW** Export | ✅ Works | LOTW confirmation status correctly detected |
+| **eQSL** Export | ❌ Not supported | eQSL ADIF exports do not include the DXCC entity field, which is required for analysis |
+
+### Tested Log Sizes
+
+- Successfully tested with logs containing up to **170,000+ QSO records**
+- QSO history dating back to **1976**
+- Includes handling of **deleted DXCC entities** (e.g., German Democratic Republic, Canal Zone)
+
 ## Technology Stack
 
 - **React 18** - Modern UI framework with hooks
