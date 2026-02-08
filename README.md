@@ -208,6 +208,7 @@ Country names and continents are automatically resolved from the built-in DXCC l
 | **Club Log** Export | ✅ Works | Confirmations displayed as Paper QSL |
 | **Ham Radio Deluxe** Export | ✅ Works | Full ADIF support |
 | **World Radio League** Export | ⚠️ Partial | Works, but no confirmation status included — all QSOs shown as Worked only |
+| **WSJT-X** Log (wsjtx_log.adi) | ❌ Not supported | WSJT-X ADIF logs do not include the DXCC entity field, which is required for analysis |
 | **eQSL** Export | ❌ Not supported | eQSL ADIF exports do not include the DXCC entity field, which is required for analysis |
 
 ### Tested Log Sizes
