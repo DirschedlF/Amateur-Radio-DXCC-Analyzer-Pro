@@ -205,6 +205,7 @@ Country names and continents are automatically resolved from the built-in DXCC l
 | **WaveLog** Export | ✅ Works | Country/continent resolved via built-in lookup table |
 | **QRZ.com** Export | ✅ Works | QRZ confirmation fields fully recognized |
 | **LOTW** Export | ✅ Works | LOTW confirmation status correctly detected |
+| **Club Log** Export | ✅ Works | Confirmations displayed as Paper QSL |
 | **eQSL** Export | ❌ Not supported | eQSL ADIF exports do not include the DXCC entity field, which is required for analysis |
 
 ### Tested Log Sizes
