@@ -206,6 +206,7 @@ Country names and continents are automatically resolved from the built-in DXCC l
 | **QRZ.com** Export | ✅ Works | QRZ confirmation fields fully recognized |
 | **LOTW** Export | ✅ Works | LOTW confirmation status correctly detected |
 | **Club Log** Export | ✅ Works | Confirmations displayed as Paper QSL |
+| **Ham Radio Deluxe** Export | ✅ Works | Full ADIF support |
 | **World Radio League** Export | ⚠️ Partial | Works, but no confirmation status included — all QSOs shown as Worked only |
 | **eQSL** Export | ❌ Not supported | eQSL ADIF exports do not include the DXCC entity field, which is required for analysis |
 
