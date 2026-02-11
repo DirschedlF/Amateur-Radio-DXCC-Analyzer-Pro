@@ -140,6 +140,8 @@ Three levels of statistics:
     "country": "string",
     "cont": "string",
     "deleted": "boolean",        // Deleted DXCC entity flag
+    "prefix": "string",          // Main callsign prefix (e.g., "VE", "P5", "BS7")
+    "mostWantedRank": "number",  // Most Wanted ranking (1-340, 1=most wanted)
     "total": "number",
     "lotw": "boolean",           // Has LOTW confirmation
     "eqsl": "boolean",           // Has eQSL confirmation
@@ -182,7 +184,7 @@ Three levels of statistics:
 
 ### Interactive Table Features
 - **Configurable Pagination**: 10 / 15 (default) / 25 / 50 / All entries per page
-- **Global Search**: Filter by country name or DXCC ID
+- **Global Search**: Filter by country name, DXCC ID, or callsign prefix (e.g., "VE", "P5", "BS7")
 - **Status Filter**: All / Confirmed Only / Worked Only / Not Worked / All Entities (5 buttons)
 - **Mode Filter**: SSB / CW / Digital / All (pre-analysis filter)
 - **Operator Filter**: Filter by STATION_CALLSIGN or OPERATOR (shown only when multiple callsigns present)
@@ -206,8 +208,13 @@ Three levels of statistics:
 - Charts hidden for "Not Worked" view; only show worked entries for "All Entities"
 
 ### Container Layout
-- Main container: `max-w-[1600px]` to accommodate 11 band columns + 4 confirmation columns
+- Main container: `max-w-[1800px]` to accommodate all columns:
+  - Text columns: Country, DXCC ID, Prefix, MW Rank, Continent, QSOs (6 columns)
+  - Band columns: 160m-6m (11 columns)
+  - Confirmation columns: LOTW, eQSL, QRZ, Paper (4 columns)
+  - **Total: 21 columns**
 - Band and confirmation columns use compact padding (`px-2`) to fit on screen
+- Prefix and MW Rank columns use medium padding (`px-3`)
 
 ## Performance Considerations
 
@@ -238,6 +245,30 @@ Three levels of statistics:
 - `lookupDXCC(id)` returns `{ name, cont, deleted }` or null
 - `getAllActiveDXCC()` returns array of `{ id, name, cont }` for non-deleted entities (340 active)
 - Continent from lookup table takes **priority** over ADIF `CONT` field for reliability
+
+### Most Wanted Data Integration (`mostWantedData.js`)
+- **Data Source**: ClubLog Most Wanted survey rankings (4 CSV files)
+  - `Digital.csv` - FT8, FT4, RTTY, PSK, and other digital modes
+  - `CW.csv` - Morse code rankings
+  - `Phone.csv` - SSB, AM voice modes
+  - `Mixed.csv` - All modes combined
+- **CSV Format**: Rank, Prefix, Entity, ADIF Code, Needed %
+- **Rankings**: 1-340 (1 = most wanted, 340 = least wanted)
+- **Mode-Dependent**: Rankings automatically switch based on active mode filter
+  - Mode filter "All" → uses Mixed.csv
+  - Mode filter "SSB" → uses Phone.csv
+  - Mode filter "CW" → uses CW.csv
+  - Mode filter "Digital" → uses Digital.csv
+- **Exported Functions**:
+  - `getMostWantedData(dxccId, mode)` - Returns `{ prefix, rank, neededPercent }`
+  - `getDXCCPrefix(dxccId, mode)` - Returns callsign prefix only
+  - `getMostWantedRank(dxccId, mode)` - Returns rank only
+- **Fallback Logic**: If DXCC not found in specified mode, searches other modes
+- **Table Display**:
+  - "Prefix" column shows main callsign prefix (e.g., P5, BS7, VE)
+  - "MW Rank" column shows Most Wanted ranking number
+  - Both columns sortable (rank sorts ascending by default - lower is better)
+  - Entities without data show "-"
 
 ### Log4OM Integration
 Handle Log4OM-specific ADIF field extensions, particularly for QRZ.com confirmation status fields (`QRZ_QSL_RCVD`, `QRZCOM_QSO_DOWNLOAD_STATUS`).
@@ -284,10 +315,16 @@ const isConfirmed = (qso) => {
 ```
 /src
   /components
-    DXCCAnalyzer.jsx     # Main single-file component (~1400 lines)
+    DXCCAnalyzer.jsx     # Main single-file component (~1500 lines)
   /utils
     dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
                          # Exports: lookupDXCC(), getAllActiveDXCC()
+    mostWantedData.js    # Most Wanted DXCC rankings (ClubLog data)
+                         # Exports: getMostWantedData(), getDXCCPrefix(), getMostWantedRank()
+    Digital.csv          # Most Wanted rankings for digital modes (340 entities)
+    CW.csv               # Most Wanted rankings for CW (340 entities)
+    Phone.csv            # Most Wanted rankings for SSB/Phone (340 entities)
+    Mixed.csv            # Most Wanted rankings for all modes (340 entities)
   /hooks                 # (empty, reserved for future custom hooks)
   App.jsx                # Root component
   main.jsx               # Entry point

@@ -18,6 +18,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 ### Comprehensive Analysis
 - **Multi-Band Tracking** - Analyze 160m, 80m, 60m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m bands
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
+- **Most Wanted Rankings** - Integrated ClubLog Most Wanted DXCC rankings with mode-dependent data (Digital/CW/SSB/Mixed)
+- **Callsign Prefix Display** - Shows main callsign prefix for each DXCC entity (e.g., P5, BS7, VE, KH7K)
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
 - **Built-in DXCC Lookup Table** - Resolves country names and continents from DXCC codes when ADIF fields are missing (ADIF 3.1.6 compliant, ~400 entities)
@@ -25,7 +27,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Context-Sensitive Display** - QSO counts, band status, and confirmation indicators adapt dynamically to active filters
 
 ### Advanced Filtering System
-- **Search** - Filter by country name or DXCC ID
+- **Search** - Filter by country name, DXCC ID, or callsign prefix (e.g., "VE", "P5", "BS7")
 - **Status Filter** - View All / Confirmed Only / Worked Only / Not Worked / All Entities
 - **Mode Filter** - Filter by operating mode (SSB, CW, Digital)
 - **Operator Filter** - Filter by station callsign (e.g. DK9RC vs. 9A/DK9RC), shown only when multiple callsigns are present in the log
@@ -37,8 +39,9 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Intelligent Filter Interaction** - Filters work together contextually: band status respects platform filter, confirmation checkmarks respect band filter, QSO counts respect both
 
 ### Column Sorting
-- **All Columns Sortable** - Click any column header to sort
-- **Smart Default Direction** - Bands, platforms, and QSOs start descending (C/checkmark/highest first); text columns start ascending
+- **All Columns Sortable** - Click any column header to sort (Country, DXCC, Prefix, MW Rank, Continent, QSOs, all bands, all platforms)
+- **Most Wanted Ranking** - Sort by rarity (1 = most wanted, 340 = least wanted) with mode-dependent rankings
+- **Smart Default Direction** - Bands, platforms, and QSOs start descending (C/checkmark/highest first); text columns start ascending; MW Rank sorts ascending (rarest first)
 - **Visual Sort Indicators** - Chevron icons show current sort column and direction
 
 ### Visual Charts & Graphs
@@ -137,11 +140,12 @@ The optimized build will be in the `dist/` directory.
    - Charts update dynamically as you apply filters
 
 4. **Explore Your Data**
-   - Use the search bar to find specific countries or DXCC entities
+   - Use the search bar to find specific countries, DXCC entities, or callsign prefixes (e.g., "VE", "P5", "KH7K")
    - Filter by status (All/Confirmed/Worked Only/Not Worked/All Entities), mode, operator, continent, confirmation platform, band, or date range
    - Use date presets (This Year, Last Year, Last 12 Months) or set a custom date range
    - Combine multiple filters for detailed analysis
-   - Sort any column by clicking its header
+   - Sort any column by clicking its header (including Most Wanted Rank for rarity-based sorting)
+   - View mode-dependent Most Wanted rankings that automatically switch between Digital/CW/SSB/Mixed
    - Navigate through pages and adjust entries per page (10/15/25/50/All)
 
 5. **Export & Print Results**
@@ -184,6 +188,35 @@ QSOs are automatically categorized by operating mode:
 - **CW**: Morse code (CW)
 - **Digital**: FT8, FT4, VARA HF, RTTY, PSK31, PSK63, JT65, JT9, WINMOR, ARDOP, PACTOR, and other HF digital modes
 - **Unknown**: VHF/UHF modes (FM, DMR) and other modes not categorized above
+
+### Most Wanted DXCC Rankings
+
+The analyzer integrates **ClubLog Most Wanted** survey data to show how rare each DXCC entity is:
+
+- **Mode-Dependent Rankings** - Rankings automatically switch based on your active mode filter:
+  - **Digital Mode** → Shows Digital.csv rankings (FT8, RTTY, PSK, etc.)
+  - **CW Mode** → Shows CW.csv rankings (Morse code)
+  - **SSB Mode** → Shows Phone.csv rankings (voice modes)
+  - **All Modes** → Shows Mixed.csv rankings (combined data)
+
+- **Ranking Scale**: 1-340 (1 = most wanted/rarest, 340 = least wanted/most common)
+
+- **Callsign Prefixes**: Each DXCC entity displays its main callsign prefix (e.g., P5, BS7, VE, KH7K)
+
+- **Search by Prefix**: Use the search bar to find entities by callsign prefix (e.g., search "P5" to find North Korea)
+
+- **Sortable Columns**: Click "MW Rank" to sort by rarity (ascending = rarest first)
+
+- **Automatic Fallback**: If an entity has no ranking in the selected mode (e.g., UN HQ in Digital mode), it falls back to Mixed.csv data
+
+**Example Rankings** (vary by mode):
+| Entity | DXCC | Prefix | Digital Rank | CW Rank | SSB Rank | Mixed Rank |
+|--------|------|--------|--------------|---------|----------|------------|
+| North Korea | 344 | P5 | 9 | 1 | 1 | 1 |
+| Scarborough Reef | 506 | BS7 | 1 | 7 | 5 | 5 |
+| Kure Island | 138 | KH7K | 3 | 3 | 2 | 2 |
+
+*Data source: ClubLog Most Wanted survey (340 active DXCC entities)*
 
 ## Logging Software Compatibility
 
@@ -232,9 +265,14 @@ Country names and continents are automatically resolved from the built-in DXCC l
 Amateur Radio DXCC Analyzer Pro/
 ├── src/
 │   ├── components/
-│   │   └── DXCCAnalyzer.jsx    # Main application component
+│   │   └── DXCCAnalyzer.jsx    # Main application component (~1500 lines)
 │   ├── utils/
-│   │   └── dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6)
+│   │   ├── dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
+│   │   ├── mostWantedData.js    # Most Wanted rankings integration (ClubLog data)
+│   │   ├── Digital.csv          # Most Wanted rankings for Digital modes (340 entities)
+│   │   ├── CW.csv               # Most Wanted rankings for CW (340 entities)
+│   │   ├── Phone.csv            # Most Wanted rankings for SSB/Phone (340 entities)
+│   │   └── Mixed.csv            # Most Wanted rankings for all modes (340 entities)
 │   ├── hooks/                   # Custom React hooks (future)
 │   ├── App.jsx                  # Root component
 │   ├── main.jsx                 # Application entry point
@@ -244,7 +282,7 @@ Amateur Radio DXCC Analyzer Pro/
 ├── package.json                 # Dependencies and scripts
 ├── vite.config.js              # Vite configuration
 ├── tailwind.config.js          # Tailwind CSS configuration
-├── CLAUDE.md                    # AI assistant guidance
+├── CLAUDE.md                    # AI assistant guidance (detailed architecture)
 └── README.md                    # This file
 ```
 
@@ -327,6 +365,10 @@ Future enhancements under consideration:
 - [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
 - [x] Built-in DXCC entity lookup table with deleted entity detection
 - [x] WaveLog QRZ.com confirmation field support
+- [x] Most Wanted DXCC rankings integration (ClubLog data)
+- [x] Mode-dependent Most Wanted rankings (Digital/CW/SSB/Mixed)
+- [x] Callsign prefix display for all DXCC entities
+- [x] Prefix-based search functionality
 - [ ] Dark/Light theme toggle
 - [ ] Multi-file comparison
 - [x] Print-friendly report generation

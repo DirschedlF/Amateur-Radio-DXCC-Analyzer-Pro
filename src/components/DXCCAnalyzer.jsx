@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
+import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -227,10 +228,16 @@ function DXCCAnalyzer() {
 
       // Initialize DXCC entry if not exists
       if (!dxccData[dxccId]) {
+        // Get Most Wanted data based on current mode filter
+        const mwData = getMostWantedData(dxccId, modeFilter === 'all' ? 'All' : modeFilter === 'ssb' ? 'SSB' : modeFilter === 'cw' ? 'CW' : 'Digital')
+        const prefix = getDXCCPrefix(dxccId, modeFilter === 'all' ? 'All' : modeFilter === 'ssb' ? 'SSB' : modeFilter === 'cw' ? 'CW' : 'Digital')
+
         dxccData[dxccId] = {
           country,
           cont: continent,
           deleted,
+          prefix: prefix || '',
+          mostWantedRank: mwData?.rank || null,
           total: 0,
           lotw: false,
           eqsl: false,
@@ -427,10 +434,18 @@ function DXCCAnalyzer() {
           emptyBandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
           emptyBandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
         })
+
+        // Get Most Wanted data based on current mode filter
+        const modeForLookup = filterMode === 'all' ? 'All' : filterMode === 'ssb' ? 'SSB' : filterMode === 'cw' ? 'CW' : 'Digital'
+        const mwData = getMostWantedData(entity.id, modeForLookup)
+        const prefix = getDXCCPrefix(entity.id, modeForLookup)
+
         return [entity.id, {
           country: entity.name,
           cont: entity.cont,
           deleted: false,
+          prefix: prefix || '',
+          mostWantedRank: mwData?.rank || null,
           total: 0,
           lotw: false,
           eqsl: false,
@@ -443,7 +458,7 @@ function DXCCAnalyzer() {
           bandPlatformQsos: emptyBandPlatformQsos
         }]
       })
-  }, [analyzedData])
+  }, [analyzedData, filterMode])
 
   // Get display QSO count (respects band and confirmation filters)
   const getDisplayQsos = (data) => {
@@ -495,12 +510,13 @@ function DXCCAnalyzer() {
       entries = Object.entries(analyzedData)
     }
 
-    // Apply search filter
+    // Apply search filter (country name, DXCC ID, or prefix)
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       entries = entries.filter(([id, data]) =>
         data.country.toLowerCase().includes(term) ||
-        id.includes(term)
+        id.includes(term) ||
+        (data.prefix && data.prefix.toLowerCase().includes(term))
       )
     }
 
@@ -549,6 +565,13 @@ function DXCCAnalyzer() {
         comparison = dataA.country.localeCompare(dataB.country)
       } else if (sortColumn === 'dxcc') {
         comparison = parseInt(idA) - parseInt(idB)
+      } else if (sortColumn === 'prefix') {
+        comparison = (dataA.prefix || '').localeCompare(dataB.prefix || '')
+      } else if (sortColumn === 'mostWantedRank') {
+        // Lower rank number = more wanted, so null ranks go to end
+        const rankA = dataA.mostWantedRank ?? 999999
+        const rankB = dataB.mostWantedRank ?? 999999
+        comparison = rankA - rankB
       } else if (sortColumn === 'cont') {
         comparison = (dataA.cont || '').localeCompare(dataB.cont || '')
       } else if (sortColumn === 'qsos') {
@@ -748,10 +771,12 @@ function DXCCAnalyzer() {
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
     if (filterDatePreset !== 'all') filters.push(`Date: ${getDateFilterLabel()}`)
 
-    const headers = ['DXCC ID', 'Country', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
+    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
     const rows = filteredData.map(([id, data]) => [
       id,
       data.country,
+      data.prefix || '',
+      data.mostWantedRank || '',
       data.deleted ? 'Yes' : '',
       data.cont,
       getDisplayQsos(data),
@@ -859,7 +884,7 @@ function DXCCAnalyzer() {
   }
 
   return (
-    <div ref={containerRef} className="container mx-auto px-4 py-8 max-w-[1600px]">
+    <div ref={containerRef} className="container mx-auto px-4 py-8 max-w-[1800px]">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
@@ -1189,7 +1214,7 @@ function DXCCAnalyzer() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search country or DXCC ID..."
+                  placeholder="Search country, DXCC ID, or prefix..."
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
                   className="w-full pl-10 pr-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1390,6 +1415,12 @@ function DXCCAnalyzer() {
                     <th className="px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('dxcc')}>
                       DXCC {sortIndicator('dxcc')}
                     </th>
+                    <th className="px-3 py-3 text-left cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('prefix')} title="Main Callsign Prefix">
+                      Prefix {sortIndicator('prefix')}
+                    </th>
+                    <th className="px-3 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('mostWantedRank')} title="Most Wanted Ranking (1=most wanted)">
+                      MW Rank {sortIndicator('mostWantedRank')}
+                    </th>
                     <th className="px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('cont')}>
                       Cont {sortIndicator('cont')}
                     </th>
@@ -1424,6 +1455,8 @@ function DXCCAnalyzer() {
                         {data.deleted && <span className="ml-2 text-xs text-red-400 font-normal">(deleted)</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
+                      <td className="px-3 py-3 text-gray-400 font-mono">{data.prefix || '-'}</td>
+                      <td className="px-3 py-3 text-center text-gray-400">{data.mostWantedRank || '-'}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
                       {BANDS.map(band => {
@@ -1453,6 +1486,8 @@ function DXCCAnalyzer() {
                         {data.deleted && <span className="ml-2 text-xs font-normal">(deleted)</span>}
                       </td>
                       <td className="px-4 py-3">{id}</td>
+                      <td className="px-3 py-3">{data.prefix || '-'}</td>
+                      <td className="px-3 py-3 text-center">{data.mostWantedRank || '-'}</td>
                       <td className="px-4 py-3">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
                       {BANDS.map(band => {

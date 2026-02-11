@@ -1,0 +1,340 @@
+Rank,Prefix,Entity,ADIF Code,Needed %
+1,BS7,Scarborough Reef,506,100.0%
+2,KH3,Johnston Island,123,100.0%
+3,KH7K,Kure Island,138,99.4%
+4,3Y-P,Peter 1 Island,199,98.7%
+5,ZS8,Prince Edward & Marion Islands,201,98.2%
+6,KH4,Midway Island,174,98.2%
+7,ZL9,New Zealand Subantarctic Islands,16,98.0%
+8,BV9P,Pratas Island,505,98.0%
+9,P5,DPRK (North Korea),344,97.8%
+10,3Y-B,Bouvet Island,24,97.7%
+11,CE0X,San Felix Islands,217,97.6%
+12,EZ,Turkmenistan,280,97.6%
+13,FT-X,Kerguelen Island,131,97.2%
+14,YV0,Aves Island,17,97.1%
+15,KH9,Wake Island,297,96.9%
+16,VK0H,Heard Island,111,96.8%
+17,KP5,Desecheo Island,43,96.0%
+18,FK-C,Chesterfield Islands,512,95.9%
+19,VP8-S,South Sandwich Islands,240,95.8%
+20,XF4,Revillagigedo,204,95.5%
+21,KH1,Baker Howland Islands,20,95.1%
+22,ZK3,Tokelau Islands,270,94.9%
+23,VP8-G,South Georgia Islands,235,94.8%
+24,JD1-M,Minami Torishima,177,94.4%
+25,XZ,Myanmar,309,94.0%
+26,VK9M,Mellish Reef,171,93.8%
+27,YK,Syria,384,93.8%
+28,VK0M,Macquarie Island,153,93.7%
+29,PY0S,Saint Peter and Paul Rocks,253,92.5%
+30,ZL8,Kermadec Island,133,92.5%
+31,KP1,Navassa Island,182,91.1%
+32,1S,Spratly Islands,N/A,90.2%
+33,T33,Banaba Island,490,90.1%
+34,VK9W,Willis Island,303,89.5%
+35,PY0T,Trindade & Martim Vaz Islands,273,89.5%
+36,TI9,Cocos Island,37,89.4%
+37,FT-T,Tromelin Island,276,89.2%
+38,3C0,Annobon,N/A,89.1%
+39,FO-M,Marquesas Islands,509,88.5%
+40,FT-Z,Amsterdam & St Paul Islands,10,88.4%
+41,"FT-J,E","Juan de Nova, Europa",124,88.1%
+42,HK0-M,Malpelo Island,N/A,87.6%
+43,R1F,Franz Josef Land,61,87.4%
+44,T31,Central Kiribati,31,85.9%
+45,V7,Marshall Islands,N/A,85.3%
+46,KH5,Palmyra & Jarvis Islands,197,85.3%
+47,SV/A,Mount Athos,180,85.1%
+48,3D2-C,Conway Reef,489,85.0%
+49,"T5,6O",Somalia,232,84.5%
+50,VP8-H,South Shetland Islands,241,84.2%
+51,A3,Tonga,160,82.3%
+52,T32,Eastern Kiribati,48,82.1%
+53,H40,Temotu Province,507,82.1%
+54,E5-N,North Cook Islands,191,81.9%
+55,YN,Nicaragua,86,81.4%
+56,VQ9,Chagos Islands,33,81.0%
+57,5A,Libya,436,79.5%
+58,3D2-R,Rotuma,460,79.3%
+59,T30,Western Kiribati,301,79.1%
+60,V6,Micronesia,173,79.0%
+61,V8,Brunei,N/A,78.5%
+62,JX,Jan Mayen,118,78.0%
+63,FO-A,Austral Islands,508,77.9%
+64,VK9L,Lord Howe Island,147,77.3%
+65,KH8-S,Swains Island,515,76.4%
+66,ZD8,Ascension Island,205,76.3%
+67,KH8,American Samoa,9,76.1%
+68,5N,Nigeria,450,75.6%
+69,E3,Eritrea,51,75.5%
+70,FO,French Polynesia,175,75.4%
+71,KH0,Mariana Islands,N/A,75.3%
+72,E5-S,South Cook Islands,234,75.2%
+73,FW,Wallis & Futuna Islands,298,75.2%
+74,H4,Solomon Islands,185,75.1%
+75,XX9,Macao,152,75.1%
+76,VP8-O,South Orkney Islands,238,74.0%
+77,ST,Sudan,466,73.7%
+78,VP6,Pitcairn Island,N/A,73.6%
+79,YI,Iraq,333,73.4%
+80,VP2M,Montserrat,96,73.4%
+81,6Y,Jamaica,82,73.1%
+82,HV,Vatican City,295,72.3%
+83,FT-W,Crozet Island,41,71.8%
+84,C2,Nauru,157,71.7%
+85,ET,Ethiopia,53,71.7%
+86,A5,Bhutan,306,71.4%
+87,EP,Iran,330,71.3%
+88,YJ,Vanuatu,158,71.1%
+89,FT-G,Glorioso Island,99,70.7%
+90,KG4,Guantanamo Bay,105,70.7%
+91,VP6-D,Ducie Island,N/A,70.5%
+92,E6,Niue,188,70.4%
+93,C6,Bahamas,60,70.4%
+94,3X,Guinea,107,70.3%
+95,HK0-A,San Andres Island,216,70.2%
+96,FO-C,Clipperton Island,N/A,70.0%
+97,VP5,Turks & Caicos Islands,N/A,69.7%
+98,Z8,Republic of South Sudan,N/A,69.5%
+99,T2,Tuvalu,282,69.5%
+100,V4,Saint Kitts & Nevis,249,69.4%
+101,JD1-O,Ogasawara,192,69.3%
+102,9Q,Dem. Rep. of the Congo,414,68.8%
+103,KH2,Guam,103,68.6%
+104,4U1ITU,ITU HQ,117,68.5%
+105,VP9,Bermuda,64,68.4%
+106,FJ,Saint Barthélemy,516,68.3%
+107,VP2V,British Virgin Islands,65,67.6%
+108,ZL7,Chatham Island,34,67.3%
+109,CE0Z,Juan Fernandez Islands,N/A,67.1%
+110,VK9N,Norfolk Island,189,66.8%
+111,CY0,Sable Island,211,66.6%
+112,VK9C,Cocos (Keeling) Island,38,66.6%
+113,VK9X,Christmas Island,35,66.4%
+114,HH,Haiti,78,66.2%
+115,TZ,Mali,442,66.2%
+116,FP,Saint Pierre & Miquelon,N/A,66.0%
+117,PJ7,Sint Maarten,518,65.8%
+118,TG,Guatemala,76,65.5%
+119,FY,French Guiana,63,65.5%
+120,XW,Laos,143,65.3%
+121,S2,Bangladesh,305,65.2%
+122,S0,Western Sahara,302,65.1%
+123,TT,Chad,410,64.9%
+124,VU4,Andaman & Nicobar Islands,11,64.5%
+125,YS,El Salvador,74,64.5%
+126,8R,Guyana,129,63.8%
+127,KH6,Hawaii,110,63.6%
+128,9U,Burundi,404,63.0%
+129,3V,Tunisia,474,62.8%
+130,PY0F,Fernando de Noronha,56,62.8%
+131,D2,Angola,401,62.6%
+132,EY,Tajikistan,262,62.5%
+133,9L,Sierra Leone,458,62.4%
+134,5W,Samoa,190,62.3%
+135,3D2,Fiji Islands,N/A,62.3%
+136,T8,Palau,22,62.0%
+137,OA,Peru,136,61.8%
+138,TL,Central African Republic,N/A,61.6%
+139,S7,Seychelles Islands,379,61.4%
+140,9J,Zambia,482,61.3%
+141,8Q,Maldives,159,61.1%
+142,CE0Y,Easter Island,N/A,61.0%
+143,ZD7,Saint Helena,250,61.0%
+144,FH,Mayotte,169,60.8%
+145,"9M6,8",East Malaysia,46,60.7%
+146,3B9,Rodrigues Island,N/A,60.7%
+147,VP8,Falkland Islands,141,60.4%
+148,HR,Honduras,80,60.3%
+149,CY9,Saint Paul Island,252,59.9%
+150,ZD9,Tristan da Cunha & Gough Islands,N/A,59.8%
+151,CP,Bolivia,104,59.8%
+152,HC8,Galapagos Islands,71,59.2%
+153,P2,Papua New Guinea,163,59.1%
+154,C9,Mozambique,181,59.0%
+155,TU,Cote d'Ivoire,428,58.9%
+156,"3B6,7",Agalega & St. Brandon Islands,4,58.7%
+157,TJ,Cameroon,406,58.3%
+158,6W,Senegal,456,58.3%
+159,XU,Cambodia,312,58.1%
+160,5U,Niger,187,58.0%
+161,7O,Yemen,492,57.9%
+162,FK,New Caledonia,162,57.9%
+163,9V,Singapore,381,57.6%
+164,SU,Egypt,478,57.5%
+165,D6,Comoros,411,56.7%
+166,"PJ5,6",Saba & St Eustatius,N/A,56.7%
+167,J2,Djibouti,382,56.0%
+168,V2,Antigua & Barbuda,94,55.9%
+169,3DA,Kingdom of Eswatini,468,55.6%
+170,ZF,Cayman Islands,N/A,55.4%
+171,J5,Guinea-Bissau,109,55.3%
+172,9N,Nepal,369,55.2%
+173,3W,Viet Nam,293,55.1%
+174,5R,Madagascar,438,54.8%
+175,FM,Martinique,84,54.5%
+176,TI,Costa Rica,308,54.5%
+177,JW,Svalbard,259,54.1%
+178,1A,Sov Military Order of Malta,N/A,54.1%
+179,7P,Lesotho,432,54.0%
+180,KL,Alaska,6,53.9%
+181,FR,Reunion Island,453,53.7%
+182,PJ2,Curacao,517,53.4%
+183,Z2,Zimbabwe,452,53.4%
+184,4W,Timor-Leste,511,53.2%
+185,CE9,Antarctica,13,53.1%
+186,E4,Palestine,510,52.7%
+187,C5,The Gambia,422,52.6%
+188,A2,Botswana,402,52.3%
+189,FS,Saint Martin,213,52.2%
+190,J3,Grenada,77,52.1%
+191,YA,Afghanistan,3,51.9%
+192,J8,Saint Vincent,98,51.8%
+193,JY,Jordan,342,51.8%
+194,TN,Republic of the Congo,412,51.1%
+195,ZP,Paraguay,132,51.0%
+196,T7,San Marino,278,51.0%
+197,VU7,Lakshadweep Islands,142,50.9%
+198,3C,Equatorial Guinea,49,50.8%
+199,PZ,Suriname,140,50.4%
+200,UK,Uzbekistan,292,50.4%
+201,VP2E,Anguilla,12,50.2%
+202,ZC4,UK Bases on Cyprus,N/A,49.9%
+203,5H,Tanzania,470,49.1%
+204,3B8,Mauritius Island,N/A,48.9%
+205,4S,Sri Lanka,315,48.5%
+206,JT,Mongolia,363,48.1%
+207,ZB,Gibraltar,233,47.9%
+208,Z6,Republic of Kosovo,522,47.9%
+209,HP,Panama,88,47.8%
+210,3A,Monaco,260,47.7%
+211,D4,Cape Verde,409,46.9%
+212,XT,Burkina Faso,480,46.9%
+213,EL,Liberia,434,46.8%
+214,OX,Greenland,237,46.6%
+215,S9,Sao Tome & Principe,219,46.5%
+216,J7,Dominica,95,46.5%
+217,AP,Pakistan,372,45.9%
+218,V5,Namibia,464,45.9%
+219,5X,Uganda,286,45.4%
+220,TY,Benin,416,45.2%
+221,5V,Togo,483,44.8%
+222,DU,Philippines,375,44.5%
+223,9X,Rwanda,454,43.5%
+224,8P,Barbados,62,43.3%
+225,BV,Taiwan,386,41.9%
+226,EX,Kyrgyzstan,135,41.8%
+227,9M2,West Malaysia,299,41.0%
+228,VR,Hong Kong,321,40.7%
+229,TK,Corsica,214,40.7%
+230,A9,Bahrain,304,40.4%
+231,PJ4,Bonaire,520,39.9%
+232,OJ0,Market Reef,167,39.8%
+233,4J,Azerbaijan,18,39.5%
+234,TR,Gabon,420,39.1%
+235,7Q,Malawi,440,38.4%
+236,P4,Aruba,91,38.2%
+237,CN,Morocco,446,37.5%
+238,7X,Algeria,400,37.4%
+239,XE,Mexico,50,37.4%
+240,HB0,Liechtenstein,251,37.3%
+241,ZL,New Zealand,170,37.1%
+242,CE,Chile,112,36.5%
+243,EK,Armenia,14,36.2%
+244,J6,Saint Lucia,97,35.7%
+245,HC,Ecuador,120,35.6%
+246,9G,Ghana,424,35.6%
+247,5Z,Kenya,430,34.5%
+248,UA2,Kaliningrad,126,33.3%
+249,9H,Malta,257,32.9%
+250,KP2,US Virgin Islands,N/A,32.9%
+251,CX,Uruguay,144,32.9%
+252,OY,Faroe Islands,222,32.5%
+253,HL,Republic of Korea,137,32.4%
+254,9Y,Trinidad & Tobago,90,32.2%
+255,HZ,Saudi Arabia,378,30.9%
+256,HK,Colombia,116,30.9%
+257,4O,Montenegro,514,30.1%
+258,VU,India,324,29.8%
+259,FG,Guadeloupe,79,29.6%
+260,OH0,Aland Islands,5,29.0%
+261,YV,Venezuela,148,28.6%
+262,HS,Thailand,387,28.4%
+263,CM,Cuba,70,28.1%
+264,LU,Argentina,100,28.0%
+265,4L,Georgia,75,27.9%
+266,V3,Belize,66,27.5%
+267,C3,Andorra,203,27.3%
+268,A7,Qatar,376,25.8%
+269,GU,Guernsey,106,25.3%
+270,ZS,Republic of South Africa,462,25.3%
+271,GD,Isle of Man,114,24.8%
+272,ZA,Albania,7,24.4%
+273,EA9,Ceuta & Melilla,32,23.3%
+274,HI,Dominican Republic,72,22.0%
+275,YB,Indonesia,327,20.1%
+276,OD,Lebanon,354,19.8%
+277,5T,Mauritania,444,19.6%
+278,Z3,North Macedonia,502,19.3%
+279,BY,China,318,18.5%
+280,VK,Australia,150,17.8%
+281,EU,Belarus,27,17.0%
+282,A6,United Arab Emirates,391,16.8%
+283,GJ,Jersey,122,16.8%
+284,KP4,Puerto Rico,202,16.5%
+285,PY,Brazil,108,14.9%
+286,LX,Luxembourg,254,14.8%
+287,OM,Slovak Republic,504,14.8%
+288,ER,Moldova,179,14.2%
+289,YU,Serbia,296,14.0%
+290,SV5,Dodecanese,45,13.5%
+291,9K,Kuwait,348,13.2%
+292,SV9,Crete,40,12.4%
+293,TF,Iceland,242,11.5%
+294,IS0,Sardinia,225,11.3%
+295,GW,Wales,294,11.2%
+296,A4,Oman,370,11.2%
+297,CU,Azores,149,11.1%
+298,5B,Cyprus,215,10.7%
+299,ES,Estonia,52,10.7%
+300,S5,Slovenia,499,10.1%
+301,OK,Czech Republic,503,9.4%
+302,ON,Belgium,209,9.3%
+303,LY,Lithuania,146,9.3%
+304,EA6,Balearic Islands,21,9.2%
+305,YL,Latvia,145,9.1%
+306,VE,Canada,1,9.0%
+307,4X,Israel,336,8.8%
+308,GI,Northern Ireland,265,8.0%
+309,CT3,Madeira Islands,256,7.9%
+310,UA9,Asiatic Russia,15,7.8%
+311,HB,Switzerland,287,7.8%
+312,PA,Netherlands,263,7.6%
+313,UN,Kazakhstan,130,7.4%
+314,OZ,Denmark,221,7.2%
+315,E7,Bosnia-Herzegovina,501,7.1%
+316,EA8,Canary Islands,29,7.0%
+317,EI,Ireland,245,7.0%
+318,JA,Japan,339,6.9%
+319,OE,Austria,206,6.8%
+320,LZ,Bulgaria,212,6.7%
+321,CT,Portugal,272,5.6%
+322,9A,Croatia,497,5.6%
+323,TA,Turkey,390,5.5%
+324,HA,Hungary,239,5.4%
+325,SM,Sweden,284,5.2%
+326,GM,Scotland,279,4.7%
+327,LA,Norway,266,3.5%
+328,SP,Poland,269,3.1%
+329,YO,Romania,275,2.9%
+330,G,England,223,2.9%
+331,OH,Finland,224,2.5%
+332,UA,European Russia,54,2.2%
+333,K,United States of America,291,2.0%
+334,F,France,227,1.8%
+335,SV,Greece,236,1.6%
+336,UR,Ukraine,288,1.6%
+337,I,Italy,248,1.2%
+338,DL,Federal Republic of Germany,N/A,0.6%
+339,EA,Spain,281,0.4%
