@@ -1,5 +1,6 @@
 // Most Wanted DXCC Data
-// Rankings based on ClubLog's Most Wanted survey
+// Rankings based on GDXF Most Wanted 2024 - Germany
+// Source: https://gdxf.de/mostwanted/index.php?year=2024 (German DX Foundation)
 // Data structure: Map of DXCC ID -> { prefix, rank, neededPercent }
 
 import DigitalCSV from './Digital.csv?raw';
@@ -7,8 +8,8 @@ import CWCSV from './CW.csv?raw';
 import PhoneCSV from './Phone.csv?raw';
 import MixedCSV from './Mixed.csv?raw';
 
-// Manual mapping for entities with N/A ADIF codes in ClubLog CSV
-// Maps ClubLog entity names to standard ADIF DXCC codes
+// Manual mapping for entities with N/A ADIF codes in GDXF CSV
+// Maps GDXF entity names to standard ADIF DXCC codes
 const NA_ENTITY_MAPPING = {
   'Cayman Islands': '69',
   'Mauritius Island': '165',

@@ -18,7 +18,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 ### Comprehensive Analysis
 - **Multi-Band Tracking** - Analyze 160m, 80m, 60m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m bands
 - **Confirmation Platforms** - Track confirmations from LOTW, eQSL, QRZ.com, and Paper QSL
-- **Most Wanted Rankings** - Integrated ClubLog Most Wanted DXCC rankings with mode-dependent data (Digital/CW/SSB/Mixed)
+- **Most Wanted Rankings** - Integrated GDXF Most Wanted DXCC rankings with mode-dependent data (Digital/CW/SSB/Mixed)
 - **Callsign Prefix Display** - Shows main callsign prefix for each DXCC entity (e.g., P5, BS7, VE, KH7K)
 - **Smart Status Detection** - Automatic detection of 'Confirmed' vs 'Worked' status
 - **DXCC Entity Grouping** - Primary grouping by DXCC ID to eliminate country name inconsistencies
@@ -191,7 +191,7 @@ QSOs are automatically categorized by operating mode:
 
 ### Most Wanted DXCC Rankings
 
-The analyzer integrates **ClubLog Most Wanted** survey data to show how rare each DXCC entity is:
+The analyzer integrates **German DX Foundation (GDXF) Most Wanted** survey data to show how rare each DXCC entity is:
 
 - **Mode-Dependent Rankings** - Rankings automatically switch based on your active mode filter:
   - **Digital Mode** → Shows Digital.csv rankings (FT8, RTTY, PSK, etc.)
@@ -216,7 +216,7 @@ The analyzer integrates **ClubLog Most Wanted** survey data to show how rare eac
 | Scarborough Reef | 506 | BS7 | 1 | 7 | 5 | 5 |
 | Kure Island | 138 | KH7K | 3 | 3 | 2 | 2 |
 
-*Data source: ClubLog Most Wanted survey (340 active DXCC entities)*
+*Data source: [GDXF Most Wanted 2024 - Germany](https://gdxf.de/mostwanted/index.php?year=2024) by German DX Foundation (340 active DXCC entities)*
 
 ## Logging Software Compatibility
 
@@ -268,7 +268,7 @@ Amateur Radio DXCC Analyzer Pro/
 │   │   └── DXCCAnalyzer.jsx    # Main application component (~1500 lines)
 │   ├── utils/
 │   │   ├── dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
-│   │   ├── mostWantedData.js    # Most Wanted rankings integration (ClubLog data)
+│   │   ├── mostWantedData.js    # Most Wanted rankings integration (GDXF data)
 │   │   ├── Digital.csv          # Most Wanted rankings for Digital modes (340 entities)
 │   │   ├── CW.csv               # Most Wanted rankings for CW (340 entities)
 │   │   ├── Phone.csv            # Most Wanted rankings for SSB/Phone (340 entities)
@@ -365,7 +365,7 @@ Future enhancements under consideration:
 - [x] Visual charts and graphs (continent breakdown, band activity, confirmation platforms, band × continent heatmap)
 - [x] Built-in DXCC entity lookup table with deleted entity detection
 - [x] WaveLog QRZ.com confirmation field support
-- [x] Most Wanted DXCC rankings integration (ClubLog data)
+- [x] Most Wanted DXCC rankings integration (GDXF data)
 - [x] Mode-dependent Most Wanted rankings (Digital/CW/SSB/Mixed)
 - [x] Callsign prefix display for all DXCC entities
 - [x] Prefix-based search functionality

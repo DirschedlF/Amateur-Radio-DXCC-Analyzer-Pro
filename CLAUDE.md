@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v1.6.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.0.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -247,7 +247,7 @@ Three levels of statistics:
 - Continent from lookup table takes **priority** over ADIF `CONT` field for reliability
 
 ### Most Wanted Data Integration (`mostWantedData.js`)
-- **Data Source**: ClubLog Most Wanted survey rankings (4 CSV files)
+- **Data Source**: GDXF Most Wanted 2024 - Germany (https://gdxf.de/mostwanted/index.php?year=2024) by German DX Foundation (4 CSV files)
   - `Digital.csv` - FT8, FT4, RTTY, PSK, and other digital modes
   - `CW.csv` - Morse code rankings
   - `Phone.csv` - SSB, AM voice modes
@@ -319,7 +319,7 @@ const isConfirmed = (qso) => {
   /utils
     dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
                          # Exports: lookupDXCC(), getAllActiveDXCC()
-    mostWantedData.js    # Most Wanted DXCC rankings (ClubLog data)
+    mostWantedData.js    # Most Wanted DXCC rankings (GDXF data)
                          # Exports: getMostWantedData(), getDXCCPrefix(), getMostWantedRank()
     Digital.csv          # Most Wanted rankings for digital modes (340 entities)
     CW.csv               # Most Wanted rankings for CW (340 entities)
