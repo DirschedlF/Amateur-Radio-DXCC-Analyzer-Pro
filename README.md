@@ -365,6 +365,7 @@ MIT License - See LICENSE file for details
 ## Author
 
 **Fritz Dirschedl (DK9RC)**
+- QRZ.com: [DK9RC](https://www.qrz.com/db/DK9RC)
 - GitHub: [@DirschedlF](https://github.com/DirschedlF)
 - Repository: [Amateur-Radio-DXCC-Analyzer-Pro](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
