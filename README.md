@@ -280,6 +280,11 @@ Amateur Radio DXCC Analyzer Pro/
 │   ├── App.jsx                  # Root component
 │   ├── main.jsx                 # Application entry point
 │   └── index.css                # Global styles with Tailwind & print
+├── docs/                        # Public documentation (GitHub)
+│   ├── README.md                # Documentation overview
+│   ├── DESIGN_DECISIONS.md      # Architecture Decision Records (ADR)
+│   ├── ELEVATOR_PITCH.md        # Project overview (English)
+│   └── ELEVATOR_PITCH_DE.md     # Project overview (German)
 ├── public/                      # Static assets
 ├── index.html                   # HTML template
 ├── package.json                 # Dependencies and scripts
