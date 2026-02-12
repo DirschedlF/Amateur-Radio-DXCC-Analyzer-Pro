@@ -888,21 +888,43 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.0.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.0.1</p>
         {logData && fileName && (
-          <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
-            <span className="text-gray-400 text-sm">📄 {fileName}</span>
-            <label className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition text-sm">
-              <RefreshCw className="w-4 h-4" />
-              Reload
-              <input
-                type="file"
-                accept=".adi,.adif"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
-          </div>
+          <>
+            {/* Screen: Filename + Reload Button */}
+            <div className="flex items-center justify-center gap-3 mt-3 print:hidden">
+              <span className="text-gray-400 text-sm">📄 {fileName}</span>
+              <label className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition text-sm">
+                <RefreshCw className="w-4 h-4" />
+                Reload
+                <input
+                  type="file"
+                  accept=".adi,.adif"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {/* Print: Filename + Active Filters */}
+            <div className="hidden print:block text-center mt-2 text-sm">
+              <div className="font-medium">File: {fileName}</div>
+              {hasActiveFilters && (
+                <div className="text-xs mt-1">
+                  Filters: {[
+                    filterMode !== 'all' && `Mode: ${activeFilterLabels.mode[filterMode]}`,
+                    filterOperator !== 'all' && `Operator: ${filterOperator}`,
+                    filterStatus !== 'all' && `Status: ${activeFilterLabels.status[filterStatus]}`,
+                    filterContinent !== 'all' && `Continent: ${filterContinent}`,
+                    filterConfirmation !== 'all' && `Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`,
+                    filterBand !== 'all' && `Band: ${filterBand}`,
+                    filterDatePreset !== 'all' && `Date: ${getDateFilterLabel()}`,
+                    searchTerm && `Search: "${searchTerm}"`
+                  ].filter(Boolean).join(' | ')}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
