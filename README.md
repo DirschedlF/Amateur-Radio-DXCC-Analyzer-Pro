@@ -360,6 +360,8 @@ Contributions are welcome! Please feel free to submit issues or pull requests.
 
 MIT License - See LICENSE file for details
 
+**📖 What does the MIT License mean for you?** Read our plain-language explanation: [MIT License Explained](docs/MIT_LICENSE_EXPLAINED.md) (German)
+
 ## Author
 
 **Fritz Dirschedl (DK9RC)**

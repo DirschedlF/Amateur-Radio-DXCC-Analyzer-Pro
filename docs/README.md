@@ -23,6 +23,13 @@ This directory contains **public documentation** for the DXCC Analyzer Pro proje
 - Feature scope (what we do and don't do)
 - Helpful for contributors and maintainers
 
+### [MIT_LICENSE_EXPLAINED.md](MIT_LICENSE_EXPLAINED.md)
+**MIT License Explained** (German) - Plain-language explanation of what the MIT License means.
+- What you can and cannot do with the code
+- Why MIT instead of GPL
+- Practical examples for ham radio operators
+- FAQ about commercial use, modifications, and contributions
+
 ---
 
 ## 🤝 Contributing
