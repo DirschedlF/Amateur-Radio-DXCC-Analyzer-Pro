@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.0.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.0.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -46,7 +46,7 @@ npm run lint
 ## Core Architecture
 
 ### Single-File Component Design
-The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1400 lines) contains:
+The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1575 lines) contains:
 
 1. **ADIF Parser Module** - Regex-based extraction of ADIF tags
 2. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
