@@ -25,17 +25,6 @@ This directory contains **public documentation** for the DXCC Analyzer Pro proje
 
 ---
 
-## 🔒 Private Documentation
-
-Internal project documentation (specifications, security audits, technical analyses) is kept in the **`.doc/`** directory, which is **not pushed to GitHub**.
-
-This separation ensures:
-- Public docs help the community
-- Private docs remain under your control
-- Clear distinction between "publish-ready" and "working notes"
-
----
-
 ## 🤝 Contributing
 
 If you're interested in contributing to DXCC Analyzer Pro, start with:
