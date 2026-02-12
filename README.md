@@ -95,6 +95,16 @@ Try it now — no installation required:
 
 Just upload your ADIF file and start analyzing. Everything runs in your browser — no data is sent anywhere.
 
+## Screenshots
+
+### Dashboard with Charts
+![DXCC Analyzer Charts View](docs/DXCC%20Analyzer%20Diagram%20View.png)
+*Interactive charts showing DXCC progress by continent, band activity, confirmation platforms, and band × continent heatmap*
+
+### Interactive Table View
+![DXCC Analyzer Table View](docs/DXCC%20Analyzer%20List%20View.png)
+*Sortable, filterable table with band-by-band confirmation status and Most Wanted rankings*
+
 ## Quick Start
 
 ### Prerequisites
