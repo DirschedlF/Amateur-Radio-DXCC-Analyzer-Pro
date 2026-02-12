@@ -1098,7 +1098,7 @@ function DXCCAnalyzer() {
                               return (
                                 <td key={band} className="px-1 py-1 text-center" title={`${row.continent} ${band}: ${confirmed}C / ${worked}W`}>
                                   <div
-                                    className="rounded mx-auto flex items-center justify-center text-xs font-medium"
+                                    className={`rounded mx-auto flex items-center justify-center text-xs font-medium ${total === 0 ? 'heatmap-empty' : ''}`}
                                     style={{
                                       width: '36px',
                                       height: '28px',

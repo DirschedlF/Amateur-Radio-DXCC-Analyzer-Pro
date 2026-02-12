@@ -254,6 +254,13 @@ body {
     print-color-adjust: exact !important;
   }
 
+  /* Empty heatmap cells: white background with border instead of dark gray */
+  [data-print-mode] .chart-section .heatmap-empty {
+    background-color: white !important;
+    border: 1px solid #d1d5db !important;
+    color: #9ca3af !important;
+  }
+
   /* Heatmap legend smaller */
   [data-print-mode] .chart-section .text-xs.text-gray-400 {
     font-size: 7px !important;
