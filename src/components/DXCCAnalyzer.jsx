@@ -525,8 +525,8 @@ function DXCCAnalyzer() {
       entries = entries.filter(([_, data]) => data.cont === filterContinent)
     }
 
-    // Apply band filter (skip for notworked - already handled above)
-    if (filterBand !== 'all' && filterStatus !== 'notworked') {
+    // Apply band filter (skip for notworked - already handled above, skip for allentities - should show all 340 entities)
+    if (filterBand !== 'all' && filterStatus !== 'notworked' && filterStatus !== 'allentities') {
       entries = entries.filter(([_, data]) =>
         data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
       )
