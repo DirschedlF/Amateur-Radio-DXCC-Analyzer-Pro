@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch
 
-**Version 2.0.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.1.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -50,6 +50,7 @@
 
 ### 🎨 **Superior User Experience**
 - **Sortable columns** with smart defaults (21 columns total)
+- **Band column highlighting** when band filter is active (blue border + dimmed other bands)
 - **Sticky headers** for easy navigation on large datasets
 - **Configurable pagination** (10/15/25/50/All entries)
 - **Visual filter chips** with individual remove buttons and "Reset All"
@@ -93,7 +94,7 @@
 ## Open Source & Community
 
 - **Free and Open Source** - MIT Licensed
-- **Active Development** - Version 2.0.0 released February 2025
+- **Active Development** - Version 2.1.0 released February 2026
 - **Community Driven** - Built by amateur radio operators, for amateur radio operators
 - **Well Documented** - Comprehensive README and developer guidance
 

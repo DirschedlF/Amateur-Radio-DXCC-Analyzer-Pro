@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.0.1**
+**Version 2.1.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -67,6 +67,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Results Counter** - "Showing X of Y entities" below the controls
 
 ### Modern Interface
+- **Band Column Highlighting** - Active band filter highlights the selected column with a blue border and dims other bands for instant visual focus
 - **Sticky Headers** - Keep columns visible while scrolling
 - **Sticky Country Column** - Keep country names visible when scrolling horizontally
 - **Responsive Design** - Works on desktop, tablet, and mobile devices
@@ -414,6 +415,7 @@ Future enhancements under consideration:
 - [x] Continent lookup table priority over ADIF data for reliability
 - [x] Unfiltered totals comparison in dashboard ("of X total")
 - [x] Printable charts (dedicated "Print Charts" button + charts in Print Report)
+- [x] Band column highlighting when band filter is active
 
 ---
 

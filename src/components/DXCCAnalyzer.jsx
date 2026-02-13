@@ -888,7 +888,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.0.1</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.1.0</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -1450,7 +1450,7 @@ function DXCCAnalyzer() {
                       QSOs {sortIndicator('qsos')}
                     </th>
                     {BANDS.map(band => (
-                      <th key={band} className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort(band)}>
+                      <th key={band} className={`px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/40 border-x border-blue-500/50' : 'opacity-40') : ''}`} onClick={() => handleSort(band)}>
                         {band} {sortIndicator(band)}
                       </th>
                     ))}
@@ -1484,7 +1484,7 @@ function DXCCAnalyzer() {
                       {BANDS.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         return (
-                          <td key={band} className="px-2 py-3 text-center">
+                          <td key={band} className={`px-2 py-3 text-center ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/30 border-x border-blue-500/50' : 'opacity-40') : ''}`}>
                             {status === 'C' && (
                               <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
                             )}

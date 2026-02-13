@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.0.1** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.1.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -50,6 +50,7 @@
 
 ### 🎨 **Überlegene Benutzererfahrung**
 - **Sortierbare Spalten** mit intelligenten Vorgaben (21 Spalten insgesamt)
+- **Band-Spalten-Hervorhebung** bei aktivem Band-Filter (blauer Rahmen + gedimmte andere Bänder)
 - **Sticky Headers** für einfache Navigation bei großen Datensätzen
 - **Konfigurierbare Paginierung** (10/15/25/50/Alle Einträge)
 - **Visuelle Filter-Chips** mit individuellen Entfernen-Buttons und "Alle zurücksetzen"
@@ -151,7 +152,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.0.1 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.1.0 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland
