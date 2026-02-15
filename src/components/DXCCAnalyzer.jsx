@@ -777,31 +777,44 @@ function DXCCAnalyzer() {
     if (!chartEntries.length && !isAllEntities) return null
     if (!allEntries.length) return null
 
+    // Helper: check if an entity counts as "confirmed" given active band + platform filters
+    const isChartConfirmed = (data) => {
+      if (filterConfirmation !== 'all') {
+        // Platform filter active: confirmed = confirmed on this specific platform
+        if (filterBand !== 'all') {
+          return data.bandConfirmations[filterBand]?.[filterConfirmation] === true
+        }
+        return data[filterConfirmation] === true
+      }
+      // No platform filter: confirmed = any confirmation on the relevant band(s)
+      if (filterBand !== 'all') {
+        return data.bands[filterBand] === 'C'
+      }
+      return BANDS.some(band => data.bands[band] === 'C')
+    }
+
+    // Helper: check if entity has activity on the relevant band(s) for "worked" count
+    const isChartWorked = (data) => {
+      if (filterBand !== 'all') {
+        return data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
+      }
+      return true // entity is in chartEntries so it has total > 0
+    }
+
     // Continent breakdown
-    // Total bar height = all worked entities in that continent (stable regardless of band filter).
-    // Color split depends on band filter:
-    //   - confirmed   = has C on filtered band (or any band if no band filter)
-    //   - workedOnly  = has C or W on filtered band but not confirmed on it (or worked but not confirmed overall)
-    //   - notWorked   = no activity on filtered band (or no activity at all) — always shown for consistent height
+    // Total bar height = all worked entities in that continent (stable regardless of filters).
+    // Color split respects both band filter and platform filter:
+    //   - confirmed  = confirmed on filtered platform (or any platform) on filtered band (or any band)
+    //   - workedOnly = worked but not confirmed per above definition
+    //   - notWorked  = no activity on filtered band (always shown when band filter active, for height consistency)
     const contMap = {}
     chartEntries.forEach(([_, data]) => {
       const cont = data.cont || 'Unknown'
       if (!contMap[cont]) contMap[cont] = { total: 0, bandConfirmed: 0, bandWorked: 0 }
       contMap[cont].total++
-      if (filterBand !== 'all') {
-        const bandStatus = data.bands[filterBand]
-        if (bandStatus === 'C') {
-          contMap[cont].bandConfirmed++
-          contMap[cont].bandWorked++
-        } else if (bandStatus === 'W') {
-          contMap[cont].bandWorked++
-        }
-      } else {
-        // No band filter: all worked entities count as worked; check any-band confirmation
+      if (isChartWorked(data)) {
         contMap[cont].bandWorked++
-        if (BANDS.some(band => data.bands[band] === 'C')) {
-          contMap[cont].bandConfirmed++
-        }
+        if (isChartConfirmed(data)) contMap[cont].bandConfirmed++
       }
     })
     // In All Entities mode: count the full universe (including not-worked entities)
@@ -832,9 +845,14 @@ function DXCCAnalyzer() {
       let confirmed = 0
       let workedOnly = 0
       chartEntries.forEach(([_, data]) => {
-        const status = getDisplayBandStatus(data, band)
-        if (status === 'C') confirmed++
-        else if (status === 'W') workedOnly++
+        const bandStatus = data.bands[band]
+        if (bandStatus === null) return // no activity on this band
+        // For band chart: "confirmed" respects platform filter per this specific band
+        const bandConfirmed = filterConfirmation !== 'all'
+          ? data.bandConfirmations[band]?.[filterConfirmation] === true
+          : bandStatus === 'C'
+        if (bandConfirmed) confirmed++
+        else workedOnly++ // has activity but not confirmed per current filter
       })
       let notWorked
       if (isAllEntities) {
