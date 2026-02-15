@@ -71,7 +71,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Sticky Headers** - Keep columns visible while scrolling
 - **Sticky Country Column** - Keep country names visible when scrolling horizontally
 - **Responsive Design** - Works on desktop, tablet, and mobile devices
-- **Configurable Pagination** - Choose 10, 15, 25, 50, or All entries per page
+- **Configurable Pagination** - Choose 10, 15, 25, 50, or All entries per page; preference is remembered across sessions
 - **File Info & Reload** - Displays loaded filename with quick reload button for re-importing
 - **Column Configuration** - Show/hide individual band and confirmation columns; settings persist in localStorage
 - **Keyboard Shortcuts** - `/` focuses search, `Esc` clears search, `←`/`→` navigates pages, `Ctrl+Shift+S` copies share link

@@ -203,6 +203,7 @@ Three levels of statistics:
 - **Export to ADIF**: Export QSOs of filtered entities as ADIF file
 - **Share Link**: Copy URL with all active filters Base64-encoded; restores exact view on load (`Ctrl+Shift+S`)
 - **Column Configuration**: Show/hide individual band and confirmation columns; settings persist in `localStorage`
+- **Persistent Pagination**: Selected rows-per-page (10/15/25/50/All) saved to `localStorage` (`dxcc-items-per-page`), restored on next load
 - **Keyboard Shortcuts**: `/` focuses search, `Esc` clears search, `←`/`→` navigate pages, `Ctrl+Shift+S` copies share link
 - **Print Report**: A4 landscape with compact print styles, all data (no pagination)
 
@@ -362,7 +363,7 @@ const isConfirmed = (qso) => {
 - Test Keyboard Shortcuts: `/` (focus search), `Esc` (clear search), `←`/`→` (pagination), `Ctrl+Shift+S` (share)
 - Test print report fits on A4 landscape with all 11 bands (or fewer when bands hidden)
 - Test sticky headers/columns on different screen sizes
-- Test pagination selector (10/15/25/50/All)
+- Test pagination selector (10/15/25/50/All); verify selection persists after page reload
 - Test "Not Worked" view with and without band filter
 - Test "All Entities" view shows 340 active entities
 - Test DXCC Missing counter with various filter combinations
