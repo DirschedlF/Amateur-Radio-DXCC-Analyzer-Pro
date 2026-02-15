@@ -733,10 +733,11 @@ function DXCCAnalyzer() {
         contMap[cont].confirmed++
       }
     })
-    // Count not-confirmed per continent in allentities mode
+    // Count not-worked per continent in allentities mode
+    // notConfirmed = entities never worked on this band (not in chartEntries at all,
+    // or in chartEntries but band status is null for the active band filter).
+    // workedOnly already covers "worked but not confirmed", so we must not double-count.
     if (isAllEntities) {
-      // allEntries = filteredData (already filtered by band/continent/etc.)
-      // Use it as the total universe so notConfirmed is filter-aware
       allEntries.forEach(([_, data]) => {
         const cont = data.cont || 'Unknown'
         if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
@@ -745,7 +746,9 @@ function DXCCAnalyzer() {
       })
       Object.keys(contMap).forEach(cont => {
         const total = contMap[cont].total ?? 0
-        contMap[cont].notConfirmed = Math.max(0, total - contMap[cont].confirmed)
+        // notConfirmed = total entities - worked entities (confirmed + workedOnly)
+        // This avoids double-counting with the workedOnly segment
+        contMap[cont].notConfirmed = Math.max(0, total - contMap[cont].worked)
       })
     }
     const continentData = Object.entries(contMap)
@@ -769,8 +772,9 @@ function DXCCAnalyzer() {
       })
       let notConfirmed
       if (isAllEntities) {
-        // Use filteredData as the total universe (respects continent + all other filters)
-        notConfirmed = Math.max(0, filteredData.length - confirmed)
+        // notConfirmed = never worked on this band (total - worked - workedOnly would double count)
+        // workedOnly already covers "worked but not confirmed", so: total - (confirmed + workedOnly)
+        notConfirmed = Math.max(0, filteredData.length - confirmed - workedOnly)
       }
       return { name: band, confirmed, workedOnly, notConfirmed }
     })
@@ -1339,9 +1343,9 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Confirmed']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Worked']}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Confirmed'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Worked'} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
                     {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
@@ -1362,9 +1366,9 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Confirmed']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Worked']}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Confirmed'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Worked'} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
                     {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
