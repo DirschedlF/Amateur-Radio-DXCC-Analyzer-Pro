@@ -123,6 +123,20 @@ body {
     font-weight: bold;
   }
 
+  /* Country column: ensure enough width and show last QSO date on its own line */
+  table td:first-child {
+    min-width: 90px;
+    white-space: normal !important;
+  }
+
+  table td:first-child .last-qso-date {
+    display: block;
+    font-size: 6px !important;
+    color: #9ca3af !important;
+    line-height: 1.2;
+    margin-top: 1px;
+  }
+
   /* Compact band status circles for print */
   table span.inline-block {
     width: 14px !important;

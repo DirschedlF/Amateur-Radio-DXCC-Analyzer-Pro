@@ -1920,7 +1920,7 @@ function DXCCAnalyzer() {
                       <td className="px-4 py-3 font-medium">
                         {data.country}
                         {data.deleted && <span className="ml-2 text-xs font-normal">(deleted)</span>}
-                        {data.lastQso && <span className="ml-1 text-xs font-normal text-gray-500">({formatQsoDate(data.lastQso)})</span>}
+                        {data.lastQso && <span className="last-qso-date ml-1 text-xs font-normal text-gray-500">({formatQsoDate(data.lastQso)})</span>}
                       </td>
                       <td className="px-4 py-3">{id}</td>
                       <td className="px-3 py-3">{data.prefix || '-'}</td>
