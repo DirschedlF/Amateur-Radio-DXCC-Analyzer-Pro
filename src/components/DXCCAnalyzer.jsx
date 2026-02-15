@@ -748,14 +748,34 @@ function DXCCAnalyzer() {
 
     // Use only worked entries for charts (exclude not-worked entities in allentities mode)
     const chartEntries = chartBaseEntries.filter(([_, data]) => data.total > 0)
-    if (!chartEntries.length) return null
 
     // In "All Entities" mode, also include not-confirmed entities per continent/band
     const isAllEntities = filterStatus === 'allentities'
+
     // All active entries including not-worked (only relevant for allentities mode).
-    // Use chartBaseEntries + missingDXCC (platform-filter-free) so the Not Worked
-    // segment is never hidden by an active platform filter.
-    const allEntries = isAllEntities ? [...chartBaseEntries, ...missingDXCC] : chartEntries
+    // Filter missingDXCC by continent filter so they don't pollute other continents.
+    let allEntries
+    if (isAllEntities) {
+      let filteredMissing = missingDXCC
+      if (filterContinent !== 'all') {
+        filteredMissing = missingDXCC.filter(([_, data]) => data.cont === filterContinent)
+      }
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase()
+        filteredMissing = filteredMissing.filter(([id, data]) =>
+          data.country.toLowerCase().includes(term) ||
+          id.includes(term) ||
+          (data.prefix && data.prefix.toLowerCase().includes(term))
+        )
+      }
+      allEntries = [...chartBaseEntries, ...filteredMissing]
+    } else {
+      allEntries = chartEntries
+    }
+
+    // In allentities mode we can still show charts even if no QSOs (all not-worked)
+    if (!chartEntries.length && !isAllEntities) return null
+    if (!allEntries.length) return null
 
     // Continent breakdown
     // Total bar height = all worked entities in that continent (stable regardless of band filter).
