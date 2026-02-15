@@ -723,20 +723,29 @@ function DXCCAnalyzer() {
     const allEntries = isAllEntities ? filteredData : chartEntries
 
     // Continent breakdown
+    // When a band filter is active, worked/confirmed counts are band-specific:
+    // - confirmed = has C on the filtered band
+    // - worked    = has C or W on the filtered band (not just any QSO)
     const contMap = {}
     chartEntries.forEach(([_, data]) => {
       const cont = data.cont || 'Unknown'
       if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
-      contMap[cont].worked++
-      const bandsToCheck = filterBand !== 'all' ? [filterBand] : BANDS
-      if (bandsToCheck.some(band => data.bands[band] === 'C')) {
-        contMap[cont].confirmed++
+      if (filterBand !== 'all') {
+        const bandStatus = data.bands[filterBand]
+        if (bandStatus === 'C' || bandStatus === 'W') {
+          contMap[cont].worked++
+          if (bandStatus === 'C') contMap[cont].confirmed++
+        }
+        // entity has total > 0 but null on this band → not counted as worked
+      } else {
+        contMap[cont].worked++
+        if (BANDS.some(band => data.bands[band] === 'C')) {
+          contMap[cont].confirmed++
+        }
       }
     })
-    // Count not-worked per continent in allentities mode
-    // notConfirmed = entities never worked on this band (not in chartEntries at all,
-    // or in chartEntries but band status is null for the active band filter).
-    // workedOnly already covers "worked but not confirmed", so we must not double-count.
+    // In All Entities mode: add not-worked segment per continent
+    // not-worked = entities with no activity on the filtered band in this continent
     if (isAllEntities) {
       allEntries.forEach(([_, data]) => {
         const cont = data.cont || 'Unknown'
@@ -746,19 +755,17 @@ function DXCCAnalyzer() {
       })
       Object.keys(contMap).forEach(cont => {
         const total = contMap[cont].total ?? 0
-        // notConfirmed = total entities - worked entities (confirmed + workedOnly)
-        // This avoids double-counting with the workedOnly segment
-        contMap[cont].notConfirmed = Math.max(0, total - contMap[cont].worked)
+        contMap[cont].notWorked = Math.max(0, total - contMap[cont].worked)
       })
     }
     const continentData = Object.entries(contMap)
       .map(([name, counts]) => ({
         name,
-        ...counts,
+        confirmed: counts.confirmed,
         workedOnly: counts.worked - counts.confirmed,
-        notConfirmed: counts.notConfirmed ?? undefined
+        notWorked: counts.notWorked ?? undefined
       }))
-      .sort((a, b) => b.worked - a.worked)
+      .sort((a, b) => (b.confirmed + b.workedOnly) - (a.confirmed + a.workedOnly))
 
     // Band activity (respects all filters + column visibility)
     const bandsToShow = filterBand !== 'all' ? [filterBand] : visibleBands
@@ -770,13 +777,12 @@ function DXCCAnalyzer() {
         if (status === 'C') confirmed++
         else if (status === 'W') workedOnly++
       })
-      let notConfirmed
+      let notWorked
       if (isAllEntities) {
-        // notConfirmed = never worked on this band (total - worked - workedOnly would double count)
-        // workedOnly already covers "worked but not confirmed", so: total - (confirmed + workedOnly)
-        notConfirmed = Math.max(0, filteredData.length - confirmed - workedOnly)
+        // notWorked = never worked on this band: total entities - confirmed - workedOnly
+        notWorked = Math.max(0, filteredData.length - confirmed - workedOnly)
       }
-      return { name: band, confirmed, workedOnly, notConfirmed }
+      return { name: band, confirmed, workedOnly, notWorked }
     })
 
     // Platform comparison
@@ -1343,12 +1349,12 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Worked']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : name === 'notWorked' ? 'Not Worked' : name]}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Worked'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : value === 'notWorked' ? 'Not Worked' : value} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
-                    {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
+                    {filterStatus === 'allentities' && <Bar dataKey="notWorked" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1366,12 +1372,12 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Worked']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : name === 'notWorked' ? 'Not Worked' : name]}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Worked'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : value === 'notWorked' ? 'Not Worked' : value} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
-                    {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
+                    {filterStatus === 'allentities' && <Bar dataKey="notWorked" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
