@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch
 
-**Version 2.1.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.3.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -34,9 +34,23 @@
 - **Intelligent filter interaction**: filters work together contextually
 - **Active filter tags** with visual chips and one-click removal
 
+### 🕐 **Last QSO Tracking & Stale Confirmations** *(NEW in v2.3.0)*
+- **Hover tooltips** on country names and band cells showing last QSO date, band, and callsign
+- **Stale confirmation warning** — clock icon on W-status bands with no confirmation for 5+ years
+- **Extended CSV export** with new columns: Last QSO date, Last QSO band, Last QSO callsign, Stale indicator
+- **Smart CSV filenames** — active filters automatically embedded (e.g., `dxcc-analysis_cw_confirmed_eu.csv`)
+- **"Not Confirmed" chart segment** — "All Entities" view shows unconfirmed entities as a third stacked segment in continent and band charts
+
+### 🔗 **Share, Export & Keyboard Shortcuts** *(NEW in v2.2.0)*
+- **Share Link** — copy a URL with all active filters Base64-encoded; anyone with the link restores the exact same view (`Ctrl+Shift+S`)
+- **JSON Export** — export filtered entity data as JSON for use with external tools
+- **ADIF Export** — export QSOs of filtered entities as a valid ADIF file for re-import or sharing
+- **Column Configuration** — show/hide individual band and confirmation columns; settings persist across sessions in localStorage
+- **Keyboard Shortcuts** — `/` focuses search, `Esc` clears it, `←`/`→` navigate pages, `Ctrl+Shift+S` copies share link
+
 ### 📤 **Professional Export & Reporting**
-- **Export filtered analysis to CSV** with full filter context in header
-- **Print-ready reports** (A4 landscape, all 21 columns visible)
+- **Export filtered analysis to CSV** with full filter context in header and filter-aware filename
+- **Print-ready reports** (A4 landscape, all 21 columns visible); shows Last QSO date in printed output
 - **Dedicated chart printing** (4 charts on single page)
 - **PDF generation** via browser print dialog
 - **All exports respect your current filters** - what you see is what you get
@@ -52,7 +66,8 @@
 - **Sortable columns** with smart defaults (21 columns total)
 - **Band column highlighting** when band filter is active (blue border + dimmed other bands)
 - **Sticky headers** for easy navigation on large datasets
-- **Configurable pagination** (10/15/25/50/All entries)
+- **Configurable pagination** (10/15/25/50/All entries); preference remembered across sessions
+- **Column configuration** — show/hide individual bands and confirmation platforms; persists in localStorage
 - **Visual filter chips** with individual remove buttons and "Reset All"
 - **Responsive design** that fits all columns on screen
 - **Date range presets** (This Year, Last Year, Last 12 Months) + custom range
@@ -85,16 +100,18 @@
 2. **GDXF Most Wanted Integration** - No other ADIF analyzer offers this
 3. **Mode-Dependent Rankings** - Rankings automatically adapt to your filter selection
 4. **Enterprise-Grade Performance** - Tested with 170,000+ QSOs
-5. **Comprehensive Export** - CSV exports include filter context for reproducibility
+5. **Comprehensive Export** - CSV, JSON, and ADIF export with filter context, Last QSO columns, and filter-aware filenames
 6. **Context-Sensitive Display** - All data dynamically adapts to active filters
 7. **Professional Print Support** - A4 landscape reports with all 21 columns
+8. **Stale Confirmation Detection** - Instantly spot W-status bands not confirmed in 5+ years
+9. **Shareable Filter Views** - Share exact analysis views via URL with all filters encoded
 
 ---
 
 ## Open Source & Community
 
 - **Free and Open Source** - MIT Licensed
-- **Active Development** - Version 2.1.0 released February 2026
+- **Active Development** - Version 2.3.0 released February 2026
 - **Community Driven** - Built by amateur radio operators, for amateur radio operators
 - **Well Documented** - Comprehensive README and developer guidance
 

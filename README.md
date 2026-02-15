@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.2.0**
+**Version 2.3.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -48,8 +48,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Visual Sort Indicators** - Chevron icons show current sort column and direction
 
 ### Visual Charts & Graphs
-- **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent
-- **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands
+- **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent; adds "Not Confirmed" segment in "All Entities" view
+- **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands; adds "Not Confirmed" segment in "All Entities" view
 - **Confirmation Platforms** - Horizontal bar chart comparing LOTW, eQSL, QRZ, and Paper confirmations
 - **Band × Continent Heatmap** - Color-intensity grid revealing gaps in your DXCC coverage
 - **Filter-Reactive** - All charts update dynamically when filters are applied
@@ -65,6 +65,14 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Filter-Aware Dashboard** - All five statistics update dynamically when filters are active
 - **Comparison Display** - Shows "of X total" with absolute unfiltered totals when filters narrow the results
 - **Results Counter** - "Showing X of Y entities" below the controls
+
+### Last QSO Tracking & Stale Confirmations *(NEW in v2.3.0)*
+- **Last QSO Tooltip (Country)** - Hover over any country name to see the date, band, and callsign of your most recent QSO with that entity
+- **Last QSO Tooltip (Band Cell)** - Hover over any band cell to see the date and callsign of the last QSO on that band
+- **Stale Confirmation Warning** - Worked (W) band cells with no confirmation for 5+ years show a 🕐 clock icon as a visual reminder to follow up
+- **Last QSO in Print Report** - Date of most recent QSO shown next to each country name in printed output
+- **Extended CSV Export** - Four new columns: `Last QSO` (date), `Last QSO Band`, `Last QSO Call`, `Stale` (Yes/No)
+- **Smart CSV Filename** - Active filters are automatically embedded in the export filename (e.g., `dxcc-analysis_cw_confirmed_eu_20m.csv`)
 
 ### Modern Interface
 - **Band Column Highlighting** - Active band filter highlights the selected column with a blue border and dims other bands for instant visual focus
@@ -83,11 +91,11 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Instant Results** - Real-time analysis and visualization
 
 ### Export & Share
-- **CSV Export** - Download your analysis with current filters applied, RFC-4180 compliant (handles country names with commas)
+- **CSV Export** - Download your analysis with current filters applied, RFC-4180 compliant (handles country names with commas); filename includes active filters
 - **JSON Export** - Export filtered entity data as JSON for use with external tools
 - **ADIF Export** - Export QSOs of filtered entities as ADIF file for re-import or sharing
 - **Share Link** - Copy a URL with all active filters encoded (Base64); recipients restore the exact same view
-- **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page
+- **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page; shows Last QSO date next to each country
 - **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
 - **PDF Generation** - Save reports as PDF via browser print dialog
 - **Print-Only Filter Summary** - Active filters displayed in printed output

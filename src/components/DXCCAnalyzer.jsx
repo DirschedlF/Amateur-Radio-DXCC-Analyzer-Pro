@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio, Clock } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
@@ -206,6 +206,24 @@ function DXCCAnalyzer() {
     )
   }
 
+  // Format YYYYMMDD → YYYY-MM-DD for display
+  const formatQsoDate = (yyyymmdd) => {
+    if (!yyyymmdd || yyyymmdd.length !== 8) return null
+    return `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`
+  }
+
+  // Returns true if the given YYYYMMDD date is more than 5 years ago
+  const isOlderThan5Years = (yyyymmdd) => {
+    if (!yyyymmdd) return false
+    const year = parseInt(yyyymmdd.slice(0, 4), 10)
+    const month = parseInt(yyyymmdd.slice(4, 6), 10) - 1
+    const day = parseInt(yyyymmdd.slice(6, 8), 10)
+    const qsoDate = new Date(year, month, day)
+    const fiveYearsAgo = new Date()
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
+    return qsoDate < fiveYearsAgo
+  }
+
   /**
    * Analyze QSOs and build DXCC matrix (with optional mode, operator, and date filter)
    * @param {Array} qsos - Array of QSO records
@@ -276,7 +294,12 @@ function DXCCAnalyzer() {
           bandQsos: {},
           bandConfirmations: {},
           platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
-          bandPlatformQsos: {}
+          bandPlatformQsos: {},
+          lastQso: null,
+          lastQsoCall: null,
+          lastQsoBand: null,
+          bandLastQso: {},
+          bandLastQsoCall: {}
         }
 
         BANDS.forEach(b => {
@@ -284,10 +307,23 @@ function DXCCAnalyzer() {
           dxccData[dxccId].bandQsos[b] = 0
           dxccData[dxccId].bandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
           dxccData[dxccId].bandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+          dxccData[dxccId].bandLastQso[b] = null
+          dxccData[dxccId].bandLastQsoCall[b] = null
         })
       }
 
       dxccData[dxccId].total++
+
+      // Track last QSO date (global and per band)
+      const qsoDate = qso.QSO_DATE || null
+      const qsoCall = qso.CALL || null
+      if (qsoDate) {
+        if (!dxccData[dxccId].lastQso || qsoDate > dxccData[dxccId].lastQso) {
+          dxccData[dxccId].lastQso = qsoDate
+          dxccData[dxccId].lastQsoCall = qsoCall
+          dxccData[dxccId].lastQsoBand = band ? band.toLowerCase() : null
+        }
+      }
 
       // Track confirmation platforms and count confirmed QSOs per platform
       // ADIF standard: Y = Yes (confirmed), V = Verified (confirmed) - both count as confirmed
@@ -309,6 +345,14 @@ function DXCCAnalyzer() {
         const normalizedBand = band.toLowerCase()
         const currentStatus = dxccData[dxccId].bands[normalizedBand]
         dxccData[dxccId].bandQsos[normalizedBand]++
+
+        // Track last QSO date and callsign per band
+        if (qsoDate) {
+          if (!dxccData[dxccId].bandLastQso[normalizedBand] || qsoDate > dxccData[dxccId].bandLastQso[normalizedBand]) {
+            dxccData[dxccId].bandLastQso[normalizedBand] = qsoDate
+            dxccData[dxccId].bandLastQsoCall[normalizedBand] = qsoCall
+          }
+        }
 
         if (confirmed) {
           dxccData[dxccId].bands[normalizedBand] = 'C'
@@ -457,11 +501,13 @@ function DXCCAnalyzer() {
         const emptyBandQsos = {}
         const emptyBandConfirmations = {}
         const emptyBandPlatformQsos = {}
+        const emptyBandLastQso = {}
         BANDS.forEach(b => {
           emptyBands[b] = null
           emptyBandQsos[b] = 0
           emptyBandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
           emptyBandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+          emptyBandLastQso[b] = null
         })
 
         // Get Most Wanted data based on current mode filter
@@ -484,7 +530,12 @@ function DXCCAnalyzer() {
           bandQsos: emptyBandQsos,
           bandConfirmations: emptyBandConfirmations,
           platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
-          bandPlatformQsos: emptyBandPlatformQsos
+          bandPlatformQsos: emptyBandPlatformQsos,
+          lastQso: null,
+          lastQsoCall: null,
+          lastQsoBand: null,
+          bandLastQso: emptyBandLastQso,
+          bandLastQsoCall: Object.fromEntries(BANDS.map(b => [b, null]))
         }]
       })
   }, [analyzedData, filterMode])
@@ -666,6 +717,11 @@ function DXCCAnalyzer() {
     const chartEntries = filteredData.filter(([_, data]) => data.total > 0)
     if (!chartEntries.length) return null
 
+    // In "All Entities" mode, also include not-confirmed entities per continent/band
+    const isAllEntities = filterStatus === 'allentities'
+    // All active entries including not-worked (only relevant for allentities mode)
+    const allEntries = isAllEntities ? filteredData : chartEntries
+
     // Continent breakdown
     const contMap = {}
     chartEntries.forEach(([_, data]) => {
@@ -677,8 +733,24 @@ function DXCCAnalyzer() {
         contMap[cont].confirmed++
       }
     })
+    // Count not-confirmed per continent in allentities mode
+    if (isAllEntities) {
+      allEntries.forEach(([_, data]) => {
+        const cont = data.cont || 'Unknown'
+        if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
+      })
+      Object.keys(contMap).forEach(cont => {
+        const total = getAllActiveDXCC().filter(e => (e.cont || 'Unknown') === cont).length
+        contMap[cont].notConfirmed = Math.max(0, total - contMap[cont].confirmed)
+      })
+    }
     const continentData = Object.entries(contMap)
-      .map(([name, counts]) => ({ name, ...counts, workedOnly: counts.worked - counts.confirmed }))
+      .map(([name, counts]) => ({
+        name,
+        ...counts,
+        workedOnly: counts.worked - counts.confirmed,
+        notConfirmed: counts.notConfirmed ?? undefined
+      }))
       .sort((a, b) => b.worked - a.worked)
 
     // Band activity (respects all filters + column visibility)
@@ -691,7 +763,12 @@ function DXCCAnalyzer() {
         if (status === 'C') confirmed++
         else if (status === 'W') workedOnly++
       })
-      return { name: band, confirmed, workedOnly }
+      let notConfirmed
+      if (isAllEntities) {
+        const totalActive = getAllActiveDXCC().length
+        notConfirmed = Math.max(0, totalActive - confirmed)
+      }
+      return { name: band, confirmed, workedOnly, notConfirmed }
     })
 
     // Platform comparison
@@ -969,21 +1046,30 @@ function DXCCAnalyzer() {
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
     if (filterDatePreset !== 'all') filters.push(`Date: ${getDateFilterLabel()}`)
 
-    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper']
-    const rows = filteredData.map(([id, data]) => [
-      id,
-      data.country,
-      data.prefix || '',
-      data.mostWantedRank || '',
-      data.deleted ? 'Yes' : '',
-      data.cont,
-      getDisplayQsos(data),
-      ...BANDS.map(band => getDisplayBandStatus(data, band) || ''),
-      getDisplayConfirmation(data, 'lotw') ? 'Yes' : 'No',
-      getDisplayConfirmation(data, 'eqsl') ? 'Yes' : 'No',
-      getDisplayConfirmation(data, 'qrz') ? 'Yes' : 'No',
-      getDisplayConfirmation(data, 'qsl') ? 'Yes' : 'No'
-    ])
+    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale']
+    const rows = filteredData.map(([id, data]) => {
+      const isStale = BANDS.some(band =>
+        getDisplayBandStatus(data, band) === 'W' && isOlderThan5Years(data.bandLastQso?.[band])
+      )
+      return [
+        id,
+        data.country,
+        data.prefix || '',
+        data.mostWantedRank || '',
+        data.deleted ? 'Yes' : '',
+        data.cont,
+        getDisplayQsos(data),
+        ...BANDS.map(band => getDisplayBandStatus(data, band) || ''),
+        getDisplayConfirmation(data, 'lotw') ? 'Yes' : 'No',
+        getDisplayConfirmation(data, 'eqsl') ? 'Yes' : 'No',
+        getDisplayConfirmation(data, 'qrz') ? 'Yes' : 'No',
+        getDisplayConfirmation(data, 'qsl') ? 'Yes' : 'No',
+        formatQsoDate(data.lastQso) || '',
+        data.lastQsoBand || '',
+        data.lastQsoCall || '',
+        isStale ? 'Yes' : 'No'
+      ]
+    })
 
     const csvLines = []
     if (filters.length > 0) {
@@ -992,12 +1078,25 @@ function DXCCAnalyzer() {
     csvLines.push(csvRow(headers))
     rows.forEach(r => csvLines.push(csvRow(r)))
 
+    // Build filename from active filters (fixed order, sanitized for filesystem)
+    const sanitize = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const filenameParts = ['dxcc-analysis']
+    if (filterMode !== 'all') filenameParts.push(sanitize(activeFilterLabels.mode[filterMode]))
+    if (filterOperator !== 'all') filenameParts.push(sanitize(filterOperator))
+    if (filterDatePreset !== 'all') filenameParts.push(sanitize(getDateFilterLabel()))
+    if (filterStatus !== 'all') filenameParts.push(sanitize(activeFilterLabels.status[filterStatus]))
+    if (filterContinent !== 'all') filenameParts.push(sanitize(filterContinent))
+    if (filterBand !== 'all') filenameParts.push(sanitize(filterBand))
+    if (filterConfirmation !== 'all') filenameParts.push(sanitize(activeFilterLabels.confirmation[filterConfirmation]))
+    if (searchTerm) filenameParts.push(sanitize(searchTerm))
+    const filename = filenameParts.join('_') + '.csv'
+
     const csv = csvLines.join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'dxcc-analysis.csv'
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -1086,7 +1185,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.2.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.3.0</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -1236,11 +1335,12 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : 'Worked Only']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Confirmed']}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : 'Worked Only'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Confirmed'} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
+                    {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1258,11 +1358,12 @@ function DXCCAnalyzer() {
                       labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
                       itemStyle={{ color: '#d1d5db' }}
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : 'Worked Only']}
+                      formatter={(value, name) => [value, name === 'confirmed' ? 'Confirmed' : name === 'workedOnly' ? 'Worked Only' : 'Not Confirmed']}
                     />
-                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : 'Worked Only'} />
+                    <Legend formatter={(value) => value === 'confirmed' ? 'Confirmed' : value === 'workedOnly' ? 'Worked Only' : 'Not Confirmed'} />
                     <Bar dataKey="confirmed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="workedOnly" stackId="a" fill="#eab308" radius={filterStatus === 'allentities' ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
+                    {filterStatus === 'allentities' && <Bar dataKey="notConfirmed" stackId="a" fill="#4b5563" radius={[4, 4, 0, 0]} />}
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1778,7 +1879,9 @@ function DXCCAnalyzer() {
                   {paginatedData.map(([id, data]) => (
                     <tr key={id} className="border-t border-gray-700 hover:bg-gray-700 transition print:hidden">
                       <td className="px-4 py-3 sticky left-0 bg-gray-800 font-medium">
-                        {data.country}
+                        <span title={data.lastQso ? `Last QSO: ${formatQsoDate(data.lastQso)}${data.lastQsoBand ? ` on ${data.lastQsoBand}` : ''}${data.lastQsoCall ? ` (${data.lastQsoCall})` : ''}` : undefined}>
+                          {data.country}
+                        </span>
                         {data.deleted && <span className="ml-2 text-xs text-red-400 font-normal">(deleted)</span>}
                       </td>
                       <td className="px-4 py-3 text-gray-400">{id}</td>
@@ -1788,13 +1891,19 @@ function DXCCAnalyzer() {
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
                       {visibleBands.map(band => {
                         const status = getDisplayBandStatus(data, band)
+                        const bandDate = data.bandLastQso?.[band]
+                        const bandCall = data.bandLastQsoCall?.[band]
+                        const stale = status === 'W' && isOlderThan5Years(bandDate)
+                        const tooltip = bandDate ? `Last QSO: ${formatQsoDate(bandDate)}${bandCall ? ` (${bandCall})` : ''}${stale ? ' – no confirmation in 5+ years' : ''}` : undefined
                         return (
                           <td key={band} className={`px-2 py-3 text-center ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/30 border-x border-blue-500/50' : 'opacity-40') : ''}`}>
                             {status === 'C' && (
-                              <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6">C</span>
+                              <span className="inline-block w-6 h-6 bg-green-600 rounded-full text-xs leading-6" title={tooltip}>C</span>
                             )}
                             {status === 'W' && (
-                              <span className="inline-block w-6 h-6 bg-yellow-600 rounded-full text-xs leading-6">W</span>
+                              <span className="inline-flex items-center justify-center gap-0.5 w-auto min-w-6 h-6 px-1 bg-yellow-600 rounded-full text-xs" title={tooltip}>
+                                W{stale && <Clock size={10} className="shrink-0" />}
+                              </span>
                             )}
                           </td>
                         )
@@ -1811,6 +1920,7 @@ function DXCCAnalyzer() {
                       <td className="px-4 py-3 font-medium">
                         {data.country}
                         {data.deleted && <span className="ml-2 text-xs font-normal">(deleted)</span>}
+                        {data.lastQso && <span className="ml-1 text-xs font-normal text-gray-500">({formatQsoDate(data.lastQso)})</span>}
                       </td>
                       <td className="px-4 py-3">{id}</td>
                       <td className="px-3 py-3">{data.prefix || '-'}</td>
