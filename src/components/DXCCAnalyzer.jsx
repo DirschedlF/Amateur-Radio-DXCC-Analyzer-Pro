@@ -26,7 +26,9 @@ function DXCCAnalyzer() {
   const [showCharts, setShowCharts] = useState(false)
   const [printMode, setPrintMode] = useState('none') // 'none' | 'charts' | 'report'
   const containerRef = useRef(null)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    try { const v = Number(localStorage.getItem('dxcc-items-per-page')); return [10,15,25,50,0].includes(v) ? v : 15 } catch { return 15 }
+  })
   const [filterDatePreset, setFilterDatePreset] = useState('all') // 'all', 'thisyear', 'lastyear', 'last12m', 'custom'
   const [filterDateFrom, setFilterDateFrom] = useState('')   // 'YYYY-MM-DD' format for <input type="date">
   const [filterDateTo, setFilterDateTo] = useState('')       // 'YYYY-MM-DD' format for <input type="date">
@@ -1867,7 +1869,9 @@ function DXCCAnalyzer() {
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value))
+                  const v = Number(e.target.value)
+                  setItemsPerPage(v)
+                  try { localStorage.setItem('dxcc-items-per-page', v) } catch {}
                   setCurrentPage(1)
                 }}
                 className="px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition text-sm"
