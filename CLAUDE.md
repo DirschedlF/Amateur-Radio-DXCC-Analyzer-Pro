@@ -43,6 +43,13 @@ npm run preview
 npm run lint
 ```
 
+### Build Standalone HTML (single self-contained file)
+```bash
+BUILD_MODE=singlefile npm run build
+```
+Output: `dist-standalone/index.html` — all JS and CSS inlined, no server required.
+Used for the GitHub Release asset (`DXCC-Analyzer-Pro-vX.X.X-standalone.html`).
+
 ## Core Architecture
 
 ### Single-File Component Design

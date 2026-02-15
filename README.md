@@ -101,6 +101,14 @@ Try it now — no installation required:
 
 Just upload your ADIF file and start analyzing. Everything runs in your browser — no data is sent anywhere.
 
+## Offline / Standalone Version
+
+For use without an internet connection, a **single self-contained HTML file** is available as a release asset:
+
+**[⬇ Download Standalone HTML](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro/releases/latest)**
+
+Download `DXCC-Analyzer-Pro-vX.X.X-standalone.html`, save it anywhere on your computer, and open it directly in your browser. No server, no installation, no internet required — all JavaScript and CSS are inlined into the single file.
+
 ## Screenshots
 
 ### Dashboard with Charts
