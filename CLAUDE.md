@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.1.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.2.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -46,14 +46,16 @@ npm run lint
 ## Core Architecture
 
 ### Single-File Component Design
-The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1575 lines) contains:
+The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1900 lines) contains:
 
 1. **ADIF Parser Module** - Regex-based extraction of ADIF tags
 2. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
 3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data
+4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data (respects column visibility)
 5. **UI Components** - Dashboard, interactive table, filters, and export functionality
-6. **Export Module** - CSV generation from filtered data with filter info header
+6. **Export Module** - CSV (RFC-4180 compliant), JSON, and ADIF export from filtered data
+7. **Share Module** - URL-based filter state encoding/decoding via Base64 (`buildShareUrl`, `handleShare`, URL-restore `useEffect`)
+8. **Column Config Module** - Persistent band/confirmation column visibility via `localStorage` (`hiddenColumns`, `toggleColumn`, `visibleBands`, `visibleConfirm`)
 
 ### ADIF Parsing Logic
 
@@ -196,7 +198,12 @@ Three levels of statistics:
 - **Column Sorting**: All columns sortable, smart default direction (desc for bands/platforms/QSOs, asc for text)
 - **Sticky Headers**: Keep band columns visible while scrolling
 - **Sticky Country Column**: Keep country names visible when scrolling horizontally
-- **Export to CSV**: Export filtered view with filter info header
+- **Export to CSV**: RFC-4180 compliant export with filter info header (handles country names with commas)
+- **Export to JSON**: Export filtered entity data as JSON for external tools
+- **Export to ADIF**: Export QSOs of filtered entities as ADIF file
+- **Share Link**: Copy URL with all active filters Base64-encoded; restores exact view on load (`Ctrl+Shift+S`)
+- **Column Configuration**: Show/hide individual band and confirmation columns; settings persist in `localStorage`
+- **Keyboard Shortcuts**: `/` focuses search, `Esc` clears search, `←`/`→` navigate pages, `Ctrl+Shift+S` copies share link
 - **Print Report**: A4 landscape with compact print styles, all data (no pagination)
 
 ### Visual Charts (Collapsible)
@@ -315,7 +322,7 @@ const isConfirmed = (qso) => {
 ```
 /src
   /components
-    DXCCAnalyzer.jsx     # Main single-file component (~1500 lines)
+    DXCCAnalyzer.jsx     # Main single-file component (~1900 lines)
   /utils
     dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
                          # Exports: lookupDXCC(), getAllActiveDXCC()
@@ -347,8 +354,13 @@ const isConfirmed = (qso) => {
 - Test data in `.testdata/` directory (git-ignored)
 - Verify all confirmation platform fields (LOTW, eQSL, QRZ, Paper)
 - Test edge cases: missing DXCC field, malformed records, unusual band designations
-- Validate CSV export with filtered data
-- Test print report fits on A4 landscape with all 11 bands
+- Validate CSV export with filtered data; verify RFC-4180 escaping for country names with commas
+- Validate JSON export contains correct entity structure
+- Validate ADIF export can be re-imported into logging software
+- Test Share Link: copy URL, open in new tab, verify all filters restored correctly
+- Test Column Config: hide bands, verify charts and table update; reload page, verify settings persist
+- Test Keyboard Shortcuts: `/` (focus search), `Esc` (clear search), `←`/`→` (pagination), `Ctrl+Shift+S` (share)
+- Test print report fits on A4 landscape with all 11 bands (or fewer when bands hidden)
 - Test sticky headers/columns on different screen sizes
 - Test pagination selector (10/15/25/50/All)
 - Test "Not Worked" view with and without band filter

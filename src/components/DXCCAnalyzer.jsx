@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
@@ -30,9 +30,36 @@ function DXCCAnalyzer() {
   const [filterDatePreset, setFilterDatePreset] = useState('all') // 'all', 'thisyear', 'lastyear', 'last12m', 'custom'
   const [filterDateFrom, setFilterDateFrom] = useState('')   // 'YYYY-MM-DD' format for <input type="date">
   const [filterDateTo, setFilterDateTo] = useState('')       // 'YYYY-MM-DD' format for <input type="date">
+  const [shareCopied, setShareCopied] = useState(false)      // Share button feedback
+  const [showColumnConfig, setShowColumnConfig] = useState(false) // Column config panel visibility
 
   // Supported bands
   const BANDS = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
+
+  // --- Feature 11: Column visibility (localStorage persisted) ---
+  const ALL_BAND_COLUMNS = BANDS
+  const ALL_CONFIRM_COLUMNS = ['lotw', 'eqsl', 'qrz', 'qsl']
+  const CONFIRM_LABELS = { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' }
+
+  const loadColumnVisibility = () => {
+    try {
+      const stored = localStorage.getItem('dxcc-hidden-columns')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
+  }
+  const [hiddenColumns, setHiddenColumns] = useState(() => loadColumnVisibility())
+
+  const toggleColumn = (col) => {
+    setHiddenColumns(prev => {
+      const next = new Set(prev)
+      if (next.has(col)) next.delete(col)
+      else next.add(col)
+      try { localStorage.setItem('dxcc-hidden-columns', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+  const visibleBands = ALL_BAND_COLUMNS.filter(b => !hiddenColumns.has(b))
+  const visibleConfirm = ALL_CONFIRM_COLUMNS.filter(c => !hiddenColumns.has(c))
 
   // Mode categories (HF modes only - VHF/UHF modes like FM, DMR excluded)
   const MODE_CATEGORIES = {
@@ -652,8 +679,8 @@ function DXCCAnalyzer() {
       .map(([name, counts]) => ({ name, ...counts, workedOnly: counts.worked - counts.confirmed }))
       .sort((a, b) => b.worked - a.worked)
 
-    // Band activity (respects all filters)
-    const bandsToShow = filterBand !== 'all' ? [filterBand] : BANDS
+    // Band activity (respects all filters + column visibility)
+    const bandsToShow = filterBand !== 'all' ? [filterBand] : visibleBands
     const bandData = bandsToShow.map(band => {
       let confirmed = 0
       let workedOnly = 0
@@ -708,7 +735,7 @@ function DXCCAnalyzer() {
     })
 
     return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
-  }, [filteredData, filterStatus, filterBand, filterConfirmation])
+  }, [filteredData, filterStatus, filterBand, filterConfirmation, hiddenColumns])
 
   // Reset all filters
   const resetAllFilters = () => {
@@ -723,6 +750,126 @@ function DXCCAnalyzer() {
     setFilterDateFrom('')
     setFilterDateTo('')
     setCurrentPage(1)
+  }
+
+  // --- Feature 9: URL Share ---
+  const buildShareUrl = useCallback(() => {
+    const params = new URLSearchParams()
+    if (searchTerm)              params.set('q', searchTerm)
+    if (filterStatus !== 'all')  params.set('status', filterStatus)
+    if (filterMode !== 'all')    params.set('mode', filterMode)
+    if (filterOperator !== 'all') params.set('op', filterOperator)
+    if (filterContinent !== 'all') params.set('cont', filterContinent)
+    if (filterConfirmation !== 'all') params.set('conf', filterConfirmation)
+    if (filterBand !== 'all')    params.set('band', filterBand)
+    if (filterDatePreset !== 'all') params.set('date', filterDatePreset)
+    if (filterDateFrom)          params.set('from', filterDateFrom)
+    if (filterDateTo)            params.set('to', filterDateTo)
+    const query = params.toString()
+    return `${window.location.origin}${window.location.pathname}${query ? '?' + query : ''}`
+  }, [searchTerm, filterStatus, filterMode, filterOperator, filterContinent, filterConfirmation, filterBand, filterDatePreset, filterDateFrom, filterDateTo])
+
+  const handleShare = () => {
+    const url = buildShareUrl()
+    navigator.clipboard?.writeText(url).then(() => {
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    }).catch(() => {
+      // Fallback: update browser URL bar
+      window.history.pushState({}, '', url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    })
+  }
+
+  // Restore filters from URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('q'))      setSearchTerm(params.get('q'))
+    if (params.has('status')) setFilterStatus(params.get('status'))
+    if (params.has('mode'))   setFilterMode(params.get('mode'))
+    if (params.has('op'))     setFilterOperator(params.get('op'))
+    if (params.has('cont'))   setFilterContinent(params.get('cont'))
+    if (params.has('conf'))   setFilterConfirmation(params.get('conf'))
+    if (params.has('band'))   setFilterBand(params.get('band'))
+    if (params.has('date'))   setFilterDatePreset(params.get('date'))
+    if (params.has('from'))   setFilterDateFrom(params.get('from'))
+    if (params.has('to'))     setFilterDateTo(params.get('to'))
+  }, [])
+
+  // --- Feature 10: Keyboard Shortcuts (searchInputRef only, effect moved after pagination) ---
+  const searchInputRef = useRef(null)
+
+  // --- Feature 12a: JSON Export ---
+  const exportToJSON = () => {
+    if (!filteredData.length) return
+    const output = filteredData.map(([id, data]) => ({
+      dxccId: id,
+      country: data.country,
+      prefix: data.prefix || null,
+      mostWantedRank: data.mostWantedRank || null,
+      deleted: data.deleted || false,
+      continent: data.cont,
+      totalQsos: getDisplayQsos(data),
+      bands: Object.fromEntries(BANDS.map(b => [b, getDisplayBandStatus(data, b) || null])),
+      confirmations: {
+        lotw: !!getDisplayConfirmation(data, 'lotw'),
+        eqsl: !!getDisplayConfirmation(data, 'eqsl'),
+        qrz:  !!getDisplayConfirmation(data, 'qrz'),
+        qsl:  !!getDisplayConfirmation(data, 'qsl'),
+      }
+    }))
+    const json = JSON.stringify({ exportedAt: new Date().toISOString(), count: output.length, entities: output }, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'dxcc-analysis.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // --- Feature 12b: ADIF Export ---
+  const exportToADIF = () => {
+    const qsoList = logData?.qsos
+    if (!qsoList?.length) return
+    // Build set of DXCC IDs currently in filteredData
+    const filteredIds = new Set(filteredData.map(([id]) => id))
+    // Filter original QSOs to only those matching visible entities (respecting pre-analysis filters too)
+    const { from: dateFrom, to: dateTo } = getDateRange(filterDatePreset)
+    const matchingQsos = qsoList.filter(qso => {
+      if (!filteredIds.has(qso.DXCC)) return false
+      if (filterMode !== 'all' && categorizeMode(qso.MODE) !== filterMode) return false
+      if (filterOperator !== 'all') {
+        const call = (qso.STATION_CALLSIGN || qso.OPERATOR || '').toUpperCase()
+        if (call !== filterOperator.toUpperCase()) return false
+      }
+      if (dateFrom || dateTo) {
+        const d = qso.QSO_DATE || ''
+        if (dateFrom && d < dateFrom) return false
+        if (dateTo && d > dateTo) return false
+      }
+      return true
+    })
+
+    if (!matchingQsos.length) return
+
+    const lines = ['ADIF Export from DXCC Analyzer Pro', `<ADIF_VER:5>3.1.6`, `<PROGRAMID:16>DXCCAnalyzerPro`, '<EOH>', '']
+    matchingQsos.forEach(qso => {
+      const fields = Object.entries(qso)
+        .filter(([, v]) => v != null && v !== '')
+        .map(([k, v]) => { const s = String(v); return `<${k}:${s.length}>${s}` })
+        .join(' ')
+      lines.push(fields + ' <EOR>')
+    })
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'dxcc-filtered.adif'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   // Get human-readable date filter label
@@ -754,11 +901,60 @@ function DXCCAnalyzer() {
         currentPage * itemsPerPage
       )
 
+  // --- Feature 10: Keyboard Shortcuts (placed after pagination so showAll/totalPages are defined) ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName
+      const isInput = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA'
+
+      if (e.key === 'Escape') {
+        if (searchTerm) {
+          setSearchTerm('')
+          setCurrentPage(1)
+        } else {
+          document.activeElement?.blur()
+        }
+        return
+      }
+
+      if (isInput) return
+
+      if (e.key === '/') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        return
+      }
+
+      if (!showAll && totalPages > 1) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault()
+          setCurrentPage(p => Math.min(totalPages, p + 1))
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault()
+          setCurrentPage(p => Math.max(1, p - 1))
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [searchTerm, showAll, totalPages])
+
   /**
    * Export to CSV
    */
   const exportToCSV = () => {
     if (!filteredData.length) return
+
+    // RFC-4180 compliant CSV cell escaping
+    const csvCell = (val) => {
+      const s = String(val ?? '')
+      // Quote if contains comma, double-quote, or newline
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+    const csvRow = (cells) => cells.map(csvCell).join(',')
 
     // Build filter info line
     const filters = []
@@ -787,14 +983,14 @@ function DXCCAnalyzer() {
       getDisplayConfirmation(data, 'qsl') ? 'Yes' : 'No'
     ])
 
-    const csvRows = []
+    const csvLines = []
     if (filters.length > 0) {
-      csvRows.push([`Filtered by: ${filters.join(' | ')}`])
+      csvLines.push(csvCell(`Filtered by: ${filters.join(' | ')}`))
     }
-    csvRows.push(headers)
-    csvRows.push(...rows)
+    csvLines.push(csvRow(headers))
+    rows.forEach(r => csvLines.push(csvRow(r)))
 
-    const csv = csvRows.map(row => row.join(',')).join('\n')
+    const csv = csvLines.join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -1230,13 +1426,16 @@ function DXCCAnalyzer() {
           )}
 
           {/* Controls */}
-          <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-wrap gap-4 items-center print:hidden">
+          <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-col gap-3 print:hidden">
+            {/* Row 1: Filters */}
+            <div className="flex flex-wrap gap-3 items-center">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Search country, DXCC ID, or prefix..."
+                  placeholder="Search country, DXCC ID, or prefix…  [/]"
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1) }}
                   className={`w-full pl-10 ${searchTerm ? 'pr-9' : 'pr-4'} py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -1405,23 +1604,116 @@ function DXCCAnalyzer() {
                 </>
               )}
             </div>
+            </div>{/* end Row 1 */}
 
+            {/* Row 2: Action Buttons */}
+            <div className="flex flex-wrap gap-2 items-center">
+
+            {/* Feature 9: Share Button */}
+            <button
+              onClick={handleShare}
+              title="Copy filter link to clipboard (Ctrl+Shift+S)"
+              className={`px-4 py-2 rounded-lg transition flex items-center gap-2 print:hidden ${shareCopied ? 'bg-green-600' : 'bg-teal-600 hover:bg-teal-700'}`}
+            >
+              <Share2 className="w-5 h-5" />
+              {shareCopied ? 'Copied!' : 'Share'}
+            </button>
+
+            {/* Feature 11: Column Config Button */}
+            <button
+              onClick={() => setShowColumnConfig(v => !v)}
+              title="Show/hide columns"
+              className={`relative px-4 py-2 rounded-lg transition flex items-center gap-2 print:hidden ${
+                showColumnConfig ? 'bg-blue-600' : hiddenColumns.size > 0 ? 'bg-gray-700 hover:bg-gray-600 ring-2 ring-yellow-500' : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+            >
+              {showColumnConfig ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              Columns
+              {hiddenColumns.size > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-500 text-gray-900 text-xs font-bold rounded-full flex items-center justify-center">
+                  {hiddenColumns.size}
+                </span>
+              )}
+            </button>
+
+            {/* Export CSV */}
             <button
               onClick={exportToCSV}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition flex items-center gap-2 print:hidden"
             >
               <Download className="w-5 h-5" />
-              Export CSV
+              CSV
             </button>
+
+            {/* Feature 12a: Export JSON */}
+            <button
+              onClick={exportToJSON}
+              title="Export filtered data as JSON"
+              className="px-4 py-2 bg-purple-700 hover:bg-purple-800 rounded-lg transition flex items-center gap-2 print:hidden"
+            >
+              <FileJson className="w-5 h-5" />
+              JSON
+            </button>
+
+            {/* Feature 12b: Export ADIF */}
+            {logData && (
+              <button
+                onClick={exportToADIF}
+                title="Export filtered QSOs as ADIF"
+                className="px-4 py-2 bg-purple-800 hover:bg-purple-900 rounded-lg transition flex items-center gap-2 print:hidden"
+              >
+                <Radio className="w-5 h-5" />
+                ADIF
+              </button>
+            )}
 
             <button
               onClick={handlePrintReport}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition flex items-center gap-2 print:hidden"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition flex items-center gap-2"
             >
               <Printer className="w-5 h-5" />
               Print Report
             </button>
-          </div>
+
+            </div>{/* end Row 2 */}
+          </div>{/* end Controls */}
+
+          {/* Feature 11: Column Configuration Panel */}
+          {showColumnConfig && (
+            <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 mb-4 print:hidden">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-300">Column Visibility</span>
+                <button
+                  onClick={() => { setHiddenColumns(new Set()); localStorage.removeItem('dxcc-hidden-columns') }}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition"
+                >
+                  Show All
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-gray-500 w-full mb-1">Bands</span>
+                {ALL_BAND_COLUMNS.map(band => (
+                  <button
+                    key={band}
+                    onClick={() => toggleColumn(band)}
+                    className={`px-3 py-1 rounded-full text-xs transition ${hiddenColumns.has(band) ? 'bg-gray-700 text-gray-500 line-through' : 'bg-blue-700 text-white'}`}
+                  >
+                    {band}
+                  </button>
+                ))}
+                <span className="text-xs text-gray-500 w-full mt-2 mb-1">Confirmations</span>
+                {ALL_CONFIRM_COLUMNS.map(col => (
+                  <button
+                    key={col}
+                    onClick={() => toggleColumn(col)}
+                    className={`px-3 py-1 rounded-full text-xs transition ${hiddenColumns.has(col) ? 'bg-gray-700 text-gray-500 line-through' : 'bg-green-700 text-white'}`}
+                  >
+                    {CONFIRM_LABELS[col]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Results Counter */}
           <div className="text-gray-400 text-sm mb-2 px-1 print:hidden">
@@ -1452,23 +1744,31 @@ function DXCCAnalyzer() {
                     <th className="px-4 py-3 text-center cursor-pointer select-none hover:bg-gray-800" onClick={() => handleSort('qsos')}>
                       QSOs {sortIndicator('qsos')}
                     </th>
-                    {BANDS.map(band => (
+                    {visibleBands.map(band => (
                       <th key={band} className={`px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/40 border-x border-blue-500/50' : 'opacity-40') : ''}`} onClick={() => handleSort(band)}>
                         {band} {sortIndicator(band)}
                       </th>
                     ))}
-                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('lotw')} title="Logbook of the World">
-                      LOTW {sortIndicator('lotw')}
-                    </th>
-                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('eqsl')} title="eQSL.cc">
-                      eQSL {sortIndicator('eqsl')}
-                    </th>
-                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qrz')} title="QRZ.com">
-                      QRZ {sortIndicator('qrz')}
-                    </th>
-                    <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qsl')} title="Paper QSL">
-                      Paper {sortIndicator('qsl')}
-                    </th>
+                    {visibleConfirm.includes('lotw') && (
+                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('lotw')} title="Logbook of the World">
+                        LOTW {sortIndicator('lotw')}
+                      </th>
+                    )}
+                    {visibleConfirm.includes('eqsl') && (
+                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('eqsl')} title="eQSL.cc">
+                        eQSL {sortIndicator('eqsl')}
+                      </th>
+                    )}
+                    {visibleConfirm.includes('qrz') && (
+                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qrz')} title="QRZ.com">
+                        QRZ {sortIndicator('qrz')}
+                      </th>
+                    )}
+                    {visibleConfirm.includes('qsl') && (
+                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qsl')} title="Paper QSL">
+                        Paper {sortIndicator('qsl')}
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -1484,7 +1784,7 @@ function DXCCAnalyzer() {
                       <td className="px-3 py-3 text-center text-gray-400">{data.mostWantedRank || '-'}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
-                      {BANDS.map(band => {
+                      {visibleBands.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         return (
                           <td key={band} className={`px-2 py-3 text-center ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/30 border-x border-blue-500/50' : 'opacity-40') : ''}`}>
@@ -1497,10 +1797,10 @@ function DXCCAnalyzer() {
                           </td>
                         )
                       })}
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
+                      {visibleConfirm.includes('lotw') && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>}
+                      {visibleConfirm.includes('eqsl') && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>}
+                      {visibleConfirm.includes('qrz')  && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>}
+                      {visibleConfirm.includes('qsl')  && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>}
                     </tr>
                   ))}
                   {/* Print all data */}
@@ -1515,7 +1815,7 @@ function DXCCAnalyzer() {
                       <td className="px-3 py-3 text-center">{data.mostWantedRank || '-'}</td>
                       <td className="px-4 py-3">{data.cont}</td>
                       <td className="px-4 py-3 text-center">{getDisplayQsos(data)}</td>
-                      {BANDS.map(band => {
+                      {visibleBands.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         return (
                           <td key={band} className="px-2 py-3 text-center">
@@ -1528,10 +1828,10 @@ function DXCCAnalyzer() {
                           </td>
                         )
                       })}
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>
-                      <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>
+                      {visibleConfirm.includes('lotw') && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'lotw') && '✓'}</td>}
+                      {visibleConfirm.includes('eqsl') && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'eqsl') && '✓'}</td>}
+                      {visibleConfirm.includes('qrz')  && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qrz') && '✓'}</td>}
+                      {visibleConfirm.includes('qsl')  && <td className="px-2 py-3 text-center">{getDisplayConfirmation(data, 'qsl') && '✓'}</td>}
                     </tr>
                   ))}
                 </tbody>

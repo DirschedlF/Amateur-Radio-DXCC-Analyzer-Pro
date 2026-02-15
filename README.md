@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.1.0**
+**Version 2.2.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -73,6 +73,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Responsive Design** - Works on desktop, tablet, and mobile devices
 - **Configurable Pagination** - Choose 10, 15, 25, 50, or All entries per page
 - **File Info & Reload** - Displays loaded filename with quick reload button for re-importing
+- **Column Configuration** - Show/hide individual band and confirmation columns; settings persist in localStorage
+- **Keyboard Shortcuts** - `/` focuses search, `Esc` clears search, `←`/`→` navigates pages, `Ctrl+Shift+S` copies share link
 
 ### High Performance
 - **Optimized for Large Logs** - Tested with 180,000+ QSOs with smooth performance
@@ -80,8 +82,11 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Smart Memoization** - React hooks for performance optimization
 - **Instant Results** - Real-time analysis and visualization
 
-### Export & Print
-- **CSV Export** - Download your analysis with current filters applied and filter info header
+### Export & Share
+- **CSV Export** - Download your analysis with current filters applied, RFC-4180 compliant (handles country names with commas)
+- **JSON Export** - Export filtered entity data as JSON for use with external tools
+- **ADIF Export** - Export QSOs of filtered entities as ADIF file for re-import or sharing
+- **Share Link** - Copy a URL with all active filters encoded (Base64); recipients restore the exact same view
 - **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page
 - **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
 - **PDF Generation** - Save reports as PDF via browser print dialog
@@ -162,12 +167,19 @@ The optimized build will be in the `dist/` directory.
    - View mode-dependent Most Wanted rankings that automatically switch between Digital/CW/SSB/Mixed
    - Navigate through pages and adjust entries per page (10/15/25/50/All)
 
-5. **Export & Print Results**
-   - Click "Export CSV" to download your filtered analysis as spreadsheet (includes filter info)
+5. **Export & Share Results**
+   - Click "CSV" to download your filtered analysis as spreadsheet (RFC-4180 compliant, includes filter info)
+   - Click "JSON" to export filtered entity data for use with external tools
+   - Click "ADIF" to export QSOs of filtered entities as ADIF file
+   - Click "Share" (or `Ctrl+Shift+S`) to copy a URL with all active filters encoded — share your exact view with others
    - Click "Print Charts" to print the 4 charts on a single A4 page
    - Click "Print Report" to generate a professional print-friendly report (includes charts as first page when visible)
    - Save as PDF using your browser's print dialog
    - All exports and prints respect your current filters with context-sensitive data
+
+6. **Customize Your View**
+   - Click "Columns" to show/hide individual band and confirmation columns; settings are saved persistently
+   - Use keyboard shortcuts: `/` to jump to search, `Esc` to clear search, `←`/`→` to navigate pages
 
 ## ADIF Field Support
 
@@ -321,9 +333,11 @@ The application uses a **single-file component architecture** for the main analy
 1. **ADIF Parser** - Regex-based extraction of ADIF tags
 2. **Analysis Engine** - Band matrix calculation with per-band/per-platform QSO tracking and confirmation logic
 3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band × continent heatmap data
+4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band × continent heatmap data (respects column visibility)
 5. **React Components** - UI rendering with hooks for state management
-6. **Export Module** - CSV generation from filtered data with filter info header
+6. **Export Module** - CSV (RFC-4180), JSON, and ADIF export from filtered data
+7. **Share Module** - URL-based filter state encoding/decoding (Base64)
+8. **Column Config Module** - Persistent band/confirmation column visibility via localStorage
 
 See `CLAUDE.md` for detailed architecture documentation.
 
