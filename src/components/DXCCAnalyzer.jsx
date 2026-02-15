@@ -713,13 +713,53 @@ function DXCCAnalyzer() {
     if (!filteredData.length) return null
     if (filterStatus === 'notworked') return null
 
+    // Build chart base entries WITHOUT the platform filter applied.
+    // The continent and band charts show overall worked/confirmed status —
+    // the platform filter only affects the table, not the shape of the DXCC landscape.
+    if (!analyzedData) return null
+    let chartBaseEntries = Object.entries(analyzedData)
+
+    // Apply search (same as filteredData)
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      chartBaseEntries = chartBaseEntries.filter(([id, data]) =>
+        data.country.toLowerCase().includes(term) ||
+        id.includes(term) ||
+        (data.prefix && data.prefix.toLowerCase().includes(term))
+      )
+    }
+    // Apply continent filter
+    if (filterContinent !== 'all') {
+      chartBaseEntries = chartBaseEntries.filter(([_, data]) => data.cont === filterContinent)
+    }
+    // Apply band filter (for non-allentities status)
+    if (filterBand !== 'all' && filterStatus !== 'allentities') {
+      chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
+        data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
+      )
+    }
+    // Apply status filter (confirmed / worked)
+    const bandsToCheckChart = filterBand !== 'all' ? [filterBand] : BANDS
+    if (filterStatus === 'confirmed') {
+      chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
+        bandsToCheckChart.some(band => data.bands[band] === 'C')
+      )
+    } else if (filterStatus === 'worked') {
+      chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
+        bandsToCheckChart.every(band => data.bands[band] !== 'C') &&
+        bandsToCheckChart.some(band => data.bands[band] === 'W')
+      )
+    }
+
     // Use only worked entries for charts (exclude not-worked entities in allentities mode)
-    const chartEntries = filteredData.filter(([_, data]) => data.total > 0)
+    const chartEntries = chartBaseEntries.filter(([_, data]) => data.total > 0)
     if (!chartEntries.length) return null
 
     // In "All Entities" mode, also include not-confirmed entities per continent/band
     const isAllEntities = filterStatus === 'allentities'
     // All active entries including not-worked (only relevant for allentities mode)
+    // For allEntities universe, use filteredData (which includes missingDXCC) but only
+    // for the total count — still without platform filter influence on worked/confirmed
     const allEntries = isAllEntities ? filteredData : chartEntries
 
     // Continent breakdown
@@ -828,7 +868,7 @@ function DXCCAnalyzer() {
     })
 
     return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
-  }, [filteredData, filterStatus, filterBand, filterConfirmation, hiddenColumns])
+  }, [filteredData, analyzedData, missingDXCC, searchTerm, filterStatus, filterContinent, filterBand, hiddenColumns])
 
   // Reset all filters
   const resetAllFilters = () => {
