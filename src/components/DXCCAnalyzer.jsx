@@ -735,12 +735,16 @@ function DXCCAnalyzer() {
     })
     // Count not-confirmed per continent in allentities mode
     if (isAllEntities) {
+      // allEntries = filteredData (already filtered by band/continent/etc.)
+      // Use it as the total universe so notConfirmed is filter-aware
       allEntries.forEach(([_, data]) => {
         const cont = data.cont || 'Unknown'
         if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
+        if (!contMap[cont].total) contMap[cont].total = 0
+        contMap[cont].total++
       })
       Object.keys(contMap).forEach(cont => {
-        const total = getAllActiveDXCC().filter(e => (e.cont || 'Unknown') === cont).length
+        const total = contMap[cont].total ?? 0
         contMap[cont].notConfirmed = Math.max(0, total - contMap[cont].confirmed)
       })
     }
@@ -765,8 +769,8 @@ function DXCCAnalyzer() {
       })
       let notConfirmed
       if (isAllEntities) {
-        const totalActive = getAllActiveDXCC().length
-        notConfirmed = Math.max(0, totalActive - confirmed)
+        // Use filteredData as the total universe (respects continent + all other filters)
+        notConfirmed = Math.max(0, filteredData.length - confirmed)
       }
       return { name: band, confirmed, workedOnly, notConfirmed }
     })
