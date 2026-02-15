@@ -752,10 +752,10 @@ function DXCCAnalyzer() {
 
     // In "All Entities" mode, also include not-confirmed entities per continent/band
     const isAllEntities = filterStatus === 'allentities'
-    // All active entries including not-worked (only relevant for allentities mode)
-    // For allEntities universe, use filteredData (which includes missingDXCC) but only
-    // for the total count — still without platform filter influence on worked/confirmed
-    const allEntries = isAllEntities ? filteredData : chartEntries
+    // All active entries including not-worked (only relevant for allentities mode).
+    // Use chartBaseEntries + missingDXCC (platform-filter-free) so the Not Worked
+    // segment is never hidden by an active platform filter.
+    const allEntries = isAllEntities ? [...chartBaseEntries, ...missingDXCC] : chartEntries
 
     // Continent breakdown
     // Total bar height = all worked entities in that continent (stable regardless of band filter).
@@ -819,7 +819,8 @@ function DXCCAnalyzer() {
       let notWorked
       if (isAllEntities) {
         // notWorked = never worked on this band: total entities - confirmed - workedOnly
-        notWorked = Math.max(0, filteredData.length - confirmed - workedOnly)
+        // Use allEntries (platform-filter-free) as universe
+        notWorked = Math.max(0, allEntries.length - confirmed - workedOnly)
       }
       return { name: band, confirmed, workedOnly, notWorked }
     })
