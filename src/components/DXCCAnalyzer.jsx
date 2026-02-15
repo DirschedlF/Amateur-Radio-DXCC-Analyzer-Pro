@@ -732,22 +732,17 @@ function DXCCAnalyzer() {
     if (filterContinent !== 'all') {
       chartBaseEntries = chartBaseEntries.filter(([_, data]) => data.cont === filterContinent)
     }
-    // Apply band filter (for non-allentities status)
-    if (filterBand !== 'all' && filterStatus !== 'allentities') {
-      chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
-        data.bands[filterBand] === 'C' || data.bands[filterBand] === 'W'
-      )
-    }
-    // Apply status filter (confirmed / worked)
-    const bandsToCheckChart = filterBand !== 'all' ? [filterBand] : BANDS
+    // Apply status filter — always uses ALL bands (not filtered band),
+    // so entity counts per continent stay stable when band filter changes.
+    // The band filter only affects the color split (Confirmed/Worked/Not Worked).
     if (filterStatus === 'confirmed') {
       chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
-        bandsToCheckChart.some(band => data.bands[band] === 'C')
+        BANDS.some(band => data.bands[band] === 'C')
       )
     } else if (filterStatus === 'worked') {
       chartBaseEntries = chartBaseEntries.filter(([_, data]) =>
-        bandsToCheckChart.every(band => data.bands[band] !== 'C') &&
-        bandsToCheckChart.some(band => data.bands[band] === 'W')
+        BANDS.every(band => data.bands[band] !== 'C') &&
+        BANDS.some(band => data.bands[band] === 'W')
       )
     }
 
@@ -763,49 +758,53 @@ function DXCCAnalyzer() {
     const allEntries = isAllEntities ? filteredData : chartEntries
 
     // Continent breakdown
-    // When a band filter is active, worked/confirmed counts are band-specific:
-    // - confirmed = has C on the filtered band
-    // - worked    = has C or W on the filtered band (not just any QSO)
+    // Total bar height = all worked entities in that continent (stable regardless of band filter).
+    // Color split depends on band filter:
+    //   - confirmed   = has C on filtered band (or any band if no band filter)
+    //   - workedOnly  = has C or W on filtered band but not confirmed on it (or worked but not confirmed overall)
+    //   - notWorked   = no activity on filtered band (or no activity at all) — always shown for consistent height
     const contMap = {}
     chartEntries.forEach(([_, data]) => {
       const cont = data.cont || 'Unknown'
-      if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
+      if (!contMap[cont]) contMap[cont] = { total: 0, bandConfirmed: 0, bandWorked: 0 }
+      contMap[cont].total++
       if (filterBand !== 'all') {
         const bandStatus = data.bands[filterBand]
-        if (bandStatus === 'C' || bandStatus === 'W') {
-          contMap[cont].worked++
-          if (bandStatus === 'C') contMap[cont].confirmed++
+        if (bandStatus === 'C') {
+          contMap[cont].bandConfirmed++
+          contMap[cont].bandWorked++
+        } else if (bandStatus === 'W') {
+          contMap[cont].bandWorked++
         }
-        // entity has total > 0 but null on this band → not counted as worked
       } else {
-        contMap[cont].worked++
+        // No band filter: all worked entities count as worked; check any-band confirmation
+        contMap[cont].bandWorked++
         if (BANDS.some(band => data.bands[band] === 'C')) {
-          contMap[cont].confirmed++
+          contMap[cont].bandConfirmed++
         }
       }
     })
-    // In All Entities mode: add not-worked segment per continent
-    // not-worked = entities with no activity on the filtered band in this continent
+    // In All Entities mode: count the full universe (including not-worked entities)
     if (isAllEntities) {
       allEntries.forEach(([_, data]) => {
         const cont = data.cont || 'Unknown'
-        if (!contMap[cont]) contMap[cont] = { worked: 0, confirmed: 0 }
-        if (!contMap[cont].total) contMap[cont].total = 0
-        contMap[cont].total++
-      })
-      Object.keys(contMap).forEach(cont => {
-        const total = contMap[cont].total ?? 0
-        contMap[cont].notWorked = Math.max(0, total - contMap[cont].worked)
+        if (!contMap[cont]) contMap[cont] = { total: 0, bandConfirmed: 0, bandWorked: 0 }
+        if (data.total === 0) contMap[cont].total++ // add not-worked entities to total
       })
     }
     const continentData = Object.entries(contMap)
-      .map(([name, counts]) => ({
-        name,
-        confirmed: counts.confirmed,
-        workedOnly: counts.worked - counts.confirmed,
-        notWorked: counts.notWorked ?? undefined
-      }))
-      .sort((a, b) => (b.confirmed + b.workedOnly) - (a.confirmed + a.workedOnly))
+      .map(([name, counts]) => {
+        const confirmed = counts.bandConfirmed
+        const workedOnly = counts.bandWorked - counts.bandConfirmed
+        const notWorked = Math.max(0, counts.total - counts.bandWorked)
+        return {
+          name,
+          confirmed,
+          workedOnly,
+          notWorked: isAllEntities ? notWorked : (filterBand !== 'all' ? notWorked : undefined)
+        }
+      })
+      .sort((a, b) => (b.confirmed + b.workedOnly + (b.notWorked || 0)) - (a.confirmed + a.workedOnly + (a.notWorked || 0)))
 
     // Band activity (respects all filters + column visibility)
     const bandsToShow = filterBand !== 'all' ? [filterBand] : visibleBands
