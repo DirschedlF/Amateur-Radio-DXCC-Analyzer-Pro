@@ -39,7 +39,7 @@
 - **Stale confirmation warning** — clock icon on W-status bands with no confirmation for 5+ years
 - **Extended CSV export** with new columns: Last QSO date, Last QSO band, Last QSO callsign, Stale indicator
 - **Smart CSV filenames** — active filters automatically embedded (e.g., `dxcc-analysis_cw_confirmed_eu.csv`)
-- **"Not Confirmed" chart segment** — "All Entities" view shows unconfirmed entities as a third stacked segment in continent and band charts
+- **"Not Worked" chart segment** — "All Entities" view shows unworked entities as a third stacked segment in continent and band charts; bar heights remain stable when switching bands or platform filters
 
 ### 🔗 **Share, Export & Keyboard Shortcuts** *(NEW in v2.2.0)*
 - **Share Link** — copy a URL with all active filters Base64-encoded; anyone with the link restores the exact same view (`Ctrl+Shift+S`)

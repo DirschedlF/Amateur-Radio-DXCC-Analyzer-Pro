@@ -48,8 +48,8 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Visual Sort Indicators** - Chevron icons show current sort column and direction
 
 ### Visual Charts & Graphs
-- **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent; adds "Not Confirmed" segment in "All Entities" view
-- **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands; adds "Not Confirmed" segment in "All Entities" view
+- **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent; adds "Not Worked" segment in "All Entities" view; bar heights stable regardless of band or platform filter
+- **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands; adds "Not Worked" segment in "All Entities" view
 - **Confirmation Platforms** - Horizontal bar chart comparing LOTW, eQSL, QRZ, and Paper confirmations
 - **Band × Continent Heatmap** - Color-intensity grid revealing gaps in your DXCC coverage
 - **Filter-Reactive** - All charts update dynamically when filters are applied
