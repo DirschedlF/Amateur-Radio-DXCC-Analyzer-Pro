@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.3.0**
+**Version 2.4.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -94,6 +94,12 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **CSV Export** - Download your analysis with current filters applied, RFC-4180 compliant (handles country names with commas); filename includes active filters
 - **JSON Export** - Export filtered entity data as JSON for use with external tools
 - **ADIF Export** - Export QSOs of filtered entities as ADIF file for re-import or sharing
+- **Obsidian Export** - Export all worked DXCC entities as a ZIP file for direct import into an Obsidian vault:
+  - `DXCC/` — one `.md` per entity with YAML frontmatter, Obsidian callouts, band status table, QSL icons, and Wikipedia link
+  - `DXCC Overview.md` — summary note with top 10 table and full entity list
+  - `DXCC Overview - Not Worked.md` — all unworked active entities grouped by continent with Wikipedia links
+  - `DXCC Dataview Queries.md` — 6 ready-to-use Dataview queries
+  - Safe to re-export and overwrite; no user-editable sections in generated files
 - **Share Link** - Copy a URL with all active filters encoded (Base64); recipients restore the exact same view
 - **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page; shows Last QSO date next to each country
 - **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
@@ -310,6 +316,7 @@ Amateur Radio DXCC Analyzer Pro/
 │   │   └── DXCCAnalyzer.jsx    # Main application component (~1500 lines)
 │   ├── utils/
 │   │   ├── dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
+│   │   │                        # Exports: lookupDXCC(), getAllActiveDXCC(), getWikipediaUrl()
 │   │   ├── mostWantedData.js    # Most Wanted rankings integration (GDXF data)
 │   │   ├── Digital.csv          # Most Wanted rankings for Digital modes (340 entities)
 │   │   ├── CW.csv               # Most Wanted rankings for CW (340 entities)
@@ -446,6 +453,8 @@ Future enhancements under consideration:
 - [x] Unfiltered totals comparison in dashboard ("of X total")
 - [x] Printable charts (dedicated "Print Charts" button + charts in Print Report)
 - [x] Band column highlighting when band filter is active
+- [x] Obsidian vault export (ZIP with entity notes, overview, not-worked list, Dataview queries)
+- [x] Wikipedia links in Obsidian export (curated slugs for all special cases)
 
 ---
 

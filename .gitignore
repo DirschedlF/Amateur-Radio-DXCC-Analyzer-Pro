@@ -18,8 +18,17 @@ dist-ssr
 # Local documentation
 .doc/
 
+# Local tools
+.tools/
+
 # Test data
 .testdata/
+
+# Obsidian test exports
+.testobsidian/
+
+# Standalone build output
+dist-standalone/
 
 # Editor directories and files
 .vscode/*

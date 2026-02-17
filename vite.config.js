@@ -1,12 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { viteSingleFile } from 'vite-plugin-singlefile'
+
+const isSingleFile = process.env.BUILD_MODE === 'singlefile'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  base: '/Amateur-Radio-DXCC-Analyzer-Pro/',
+  plugins: isSingleFile ? [react(), viteSingleFile()] : [react()],
+  base: isSingleFile ? './' : '/Amateur-Radio-DXCC-Analyzer-Pro/',
   build: {
-    outDir: 'dist',
+    outDir: isSingleFile ? 'dist-standalone' : 'dist',
     sourcemap: false,
     rollupOptions: {
       output: {

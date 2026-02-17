@@ -208,6 +208,12 @@ Three levels of statistics:
 - **Export to CSV**: RFC-4180 compliant export with filter info header (handles country names with commas)
 - **Export to JSON**: Export filtered entity data as JSON for external tools
 - **Export to ADIF**: Export QSOs of filtered entities as ADIF file
+- **Export to Obsidian**: Export DXCC entities as a ZIP file containing Obsidian Flavored Markdown notes. ZIP contents:
+  - `DXCC/` — one `.md` per worked entity with YAML frontmatter (dxcc_id, status, QSL flags, wikipedia URL, tags), Obsidian callouts, band status table with last QSO dates, and QSL platform icons. No Notes section (intentionally omitted to allow safe re-export without overwriting user content).
+  - `DXCC Overview.md` — summary with top 10 table and full entity list with wikilinks
+  - `DXCC Overview - Not Worked.md` — all active entities not yet worked, grouped by continent with DXCC#, name, and Wikipedia link
+  - `DXCC Dataview Queries.md` — 6 ready-to-use Dataview queries (unconfirmed, by continent, top 20, no LoTW, Wikipedia links, timeline)
+  - All files safe to re-export and overwrite; respects all active filters.
 - **Share Link**: Copy URL with all active filters Base64-encoded; restores exact view on load (`Ctrl+Shift+S`)
 - **Column Configuration**: Show/hide individual band and confirmation columns; settings persist in `localStorage`
 - **Persistent Pagination**: Selected rows-per-page (10/15/25/50/All) saved to `localStorage` (`dxcc-items-per-page`), restored on next load
@@ -256,10 +262,12 @@ Three levels of statistics:
 
 ### DXCC Entity Lookup Table (`dxccEntities.js`)
 - ~400 entities from ADIF 3.1.6 specification
-- Format: `{ id: [name, continent, deleted] }` where deleted is boolean
+- Format: `{ id: [name, continent, deleted, wikipediaSlug] }` where deleted is boolean and wikipediaSlug is either a string (exact Wikipedia article slug) or null (auto-generate from name)
 - `lookupDXCC(id)` returns `{ name, cont, deleted }` or null
 - `getAllActiveDXCC()` returns array of `{ id, name, cont }` for non-deleted entities (340 active)
+- `getWikipediaUrl(id)` returns full `https://en.wikipedia.org/wiki/...` URL; uses slug if set, otherwise auto-generates from entity name
 - Continent from lookup table takes **priority** over ADIF `CONT` field for reliability
+- Wikipedia slugs manually curated for all problematic cases (abbreviations, special characters, historical names, disambiguation)
 
 ### Most Wanted Data Integration (`mostWantedData.js`)
 - **Data Source**: GDXF Most Wanted 2024 - Germany (https://gdxf.de/mostwanted/index.php?year=2024) by German DX Foundation (4 CSV files)
@@ -333,7 +341,8 @@ const isConfirmed = (qso) => {
     DXCCAnalyzer.jsx     # Main single-file component (~1900 lines)
   /utils
     dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
-                         # Exports: lookupDXCC(), getAllActiveDXCC()
+                         # Format: { id: [name, continent, deleted, wikipediaSlug] }
+                         # Exports: lookupDXCC(), getAllActiveDXCC(), getWikipediaUrl()
     mostWantedData.js    # Most Wanted DXCC rankings (GDXF data)
                          # Exports: getMostWantedData(), getDXCCPrefix(), getMostWantedRank()
     Digital.csv          # Most Wanted rankings for digital modes (340 entities)

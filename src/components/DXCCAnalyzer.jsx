@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio, Clock } from 'lucide-react'
+import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio, Clock, BookOpen } from 'lucide-react'
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { lookupDXCC, getAllActiveDXCC } from '../utils/dxccEntities'
+import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
 
 /**
@@ -971,6 +971,447 @@ function DXCCAnalyzer() {
   // --- Feature 10: Keyboard Shortcuts (searchInputRef only, effect moved after pagination) ---
   const searchInputRef = useRef(null)
 
+  // --- Feature 13: Obsidian Export ---
+  const exportToObsidian = () => {
+    if (!filteredData.length || !analyzedData) return
+
+    const now = new Date()
+    const exportDate = now.toISOString().split('T')[0]
+    const exportTime = now.toISOString().replace('T', ' ').substring(0, 16)
+
+    const BANDS_ALL = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
+    const BAND_STATUS_LABEL = { C: '✅ Confirmed', W: '⬜ Worked', null: '—' }
+
+    // Only export worked entities (not the missingDXCC placeholders)
+    const workedEntries = filteredData.filter(([_, data]) => data.total > 0)
+
+    const files = []
+
+    // ── Individual Entity Notes ──────────────────────────────────────────
+    workedEntries.forEach(([id, data]) => {
+      const isConfirmedEntity = BANDS_ALL.some(b => data.bands[b] === 'C')
+      const status = isConfirmedEntity ? 'confirmed' : 'worked'
+
+      // Build tags list
+      const tags = ['dxcc', 'amateur-radio']
+      if (data.cont) tags.push(`continent/${data.cont}`)
+      tags.push(status)
+      if (data.deleted) tags.push('deleted-entity')
+
+      // Frontmatter
+      const frontmatter = [
+        '---',
+        `dxcc_id: ${id}`,
+        `country: "${data.country.replace(/"/g, "'")}"`  ,
+        `prefix: "${data.prefix || ''}"`  ,
+        `continent: ${data.cont || 'unknown'}`,
+        `status: ${status}`,
+        `total_qsos: ${data.total}`,
+        `lotw: ${data.lotw}`,
+        `eqsl: ${data.eqsl}`,
+        `qrz: ${data.qrz}`,
+        `qsl: ${data.qsl}`,
+        data.mostWantedRank ? `most_wanted_rank: ${data.mostWantedRank}` : `most_wanted_rank: null`,
+        data.lastQso ? `last_qso: ${formatQsoDate(data.lastQso)}` : `last_qso: null`,
+        data.deleted ? `deleted: true` : `deleted: false`,
+        (() => { const url = getWikipediaUrl(id); return url ? `wikipedia: "${url}"` : `wikipedia: null` })(),
+        `tags:`,
+        ...tags.map(t => `  - ${t}`),
+        `updated: ${exportDate}`,
+        '---',
+      ].join('\n')
+
+      // Band status table
+      const bandRows = BANDS_ALL.map(band => {
+        const status = data.bands[band]
+        const label = BAND_STATUS_LABEL[status] || '—'
+        const lastQso = data.bandLastQso?.[band] ? formatQsoDate(data.bandLastQso[band]) : ''
+        const lastCall = data.bandLastQsoCall?.[band] || ''
+        const detail = lastQso ? ` *(${lastQso}${lastCall ? ', ' + lastCall : ''})*` : ''
+        return `| ${band.padEnd(4)} | ${label}${detail} |`
+      }).join('\n')
+
+      // Confirmation section
+      const confirmIcons = [
+        `LoTW: ${data.lotw ? '✅' : '❌'}`,
+        `eQSL: ${data.eqsl ? '✅' : '❌'}`,
+        `QRZ: ${data.qrz ? '✅' : '❌'}`,
+        `Paper: ${data.qsl ? '✅' : '❌'}`,
+      ].join('  ·  ')
+
+      const body = [
+        `# ${data.country}${data.prefix ? ` (${data.prefix})` : ''}`,
+        '',
+        `> [!info] DXCC Entity ${id}${data.deleted ? ' *(deleted)*' : ''}`,
+        `> Continent: **${data.cont || 'unknown'}** · Total QSOs: **${data.total}** · Status: **${status}**`,
+        data.mostWantedRank ? `> Most Wanted Rank: **#${data.mostWantedRank}**` : '',
+        '',
+        '## QSL Status',
+        '',
+        confirmIcons,
+        '',
+        (() => { const url = getWikipediaUrl(id); return url ? `[Wikipedia: ${data.country}](${url})` : '' })(),
+        '',
+        '## Band Activity',
+        '',
+        '| Band | Status |',
+        '|------|--------|',
+        bandRows,
+        '',
+        '---',
+        `*Exported from [[DXCC Overview]] on ${exportTime} by DXCC Analyzer Pro*`,
+      ].filter(line => line !== null).join('\n')
+
+      // Sanitize filename: replace characters invalid in most filesystems
+      const safeName = data.country.replace(/[\/\\:*?"<>|]/g, '-')
+      files.push({
+        name: `DXCC/${safeName} (${id}).md`,
+        content: frontmatter + '\n\n' + body,
+      })
+    })
+
+    // ── Overview Note ────────────────────────────────────────────────────
+    const totalWorked = workedEntries.length
+    const totalConfirmed = workedEntries.filter(([_, d]) => BANDS_ALL.some(b => d.bands[b] === 'C')).length
+    const confirmRate = totalWorked > 0 ? ((totalConfirmed / totalWorked) * 100).toFixed(1) : 0
+
+    // Top 10 by QSOs
+    const top10 = [...workedEntries]
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 10)
+      .map(([id, d]) => `| [[${d.country.replace(/[\/\\:*?"<>|]/g, '-')} (${id})\|${d.country}]] | ${d.prefix || '-'} | ${d.cont} | ${d.total} | ${d.lotw ? '✅' : '❌'} |`)
+      .join('\n')
+
+    // Active filters summary
+    const filterParts = []
+    if (filterMode !== 'all') filterParts.push(`Mode: ${activeFilterLabels.mode[filterMode]}`)
+    if (filterStatus !== 'all') filterParts.push(`Status: ${activeFilterLabels.status[filterStatus]}`)
+    if (filterContinent !== 'all') filterParts.push(`Continent: ${filterContinent}`)
+    if (filterBand !== 'all') filterParts.push(`Band: ${filterBand}`)
+    if (filterConfirmation !== 'all') filterParts.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
+    if (filterDatePreset !== 'all') filterParts.push(`Date: ${getDateFilterLabel()}`)
+    if (searchTerm) filterParts.push(`Search: "${searchTerm}"`)
+    const filtersNote = filterParts.length > 0
+      ? `> [!warning] Filtered Export\n> This export includes only a filtered subset: ${filterParts.join(' · ')}\n`
+      : ''
+
+    const overviewFrontmatter = [
+      '---',
+      `title: DXCC Overview`,
+      `callsign: DK9RC`,
+      `total_worked: ${totalWorked}`,
+      `total_confirmed: ${totalConfirmed}`,
+      `confirmation_rate: ${confirmRate}`,
+      `export_date: ${exportDate}`,
+      `tags:`,
+      `  - dxcc`,
+      `  - amateur-radio`,
+      `  - overview`,
+      '---',
+    ].join('\n')
+
+    const overviewBody = [
+      '# DXCC Overview',
+      '',
+      `> [!success] Progress as of ${exportDate}`,
+      `> **Worked:** ${totalWorked} · **Confirmed:** ${totalConfirmed} · **Rate:** ${confirmRate}%`,
+      '',
+      filtersNote,
+      '## Top 10 Entities by QSOs',
+      '',
+      '| Entity | Prefix | Cont | QSOs | LoTW |',
+      '|--------|--------|------|------|------|',
+      top10,
+      '',
+      '## All Entities',
+      '',
+      workedEntries
+        .sort((a, b) => a[1].country.localeCompare(b[1].country))
+        .map(([id, d]) => {
+          const safeName = d.country.replace(/[\/\\:*?"<>|]/g, '-')
+          const isConf = BANDS_ALL.some(b => d.bands[b] === 'C')
+          return `- ${isConf ? '✅' : '⬜'} [[${safeName} (${id})|${d.country}]]${d.prefix ? ` *(${d.prefix})*` : ''} — ${d.total} QSOs`
+        })
+        .join('\n'),
+      '',
+      '---',
+      `*Generated by DXCC Analyzer Pro on ${exportTime} — 73 de DK9RC*`,
+    ].join('\n')
+
+    files.push({
+      name: 'DXCC Overview.md',
+      content: overviewFrontmatter + '\n\n' + overviewBody,
+    })
+
+    // ── Dataview Queries Note ────────────────────────────────────────────
+    const dvFolder = '!Amateur Radio/Radio - DXCC Analysis/DXCC'
+    const dataviewContent = [
+      '---',
+      'title: DXCC Dataview Queries',
+      'tags:',
+      '  - dxcc',
+      '  - amateur-radio',
+      '  - dataview',
+      '  - reference',
+      '---',
+      '',
+      '# DXCC Dataview Queries',
+      '',
+      '> [!info] Voraussetzung',
+      '> Das **Dataview**-Plugin muss installiert und aktiviert sein.',
+      `> Alle Queries gehen davon aus, dass die Entity-Notes im Ordner \`${dvFolder}/\` liegen.`,
+      '',
+      '---',
+      '',
+      '## 1 — Unconfirmed Entities (Worked, aber nicht bestätigt)',
+      '',
+      '```dataview',
+      'TABLE prefix, continent, total_qsos, last_qso AS "Last QSO"',
+      `FROM "${dvFolder}"`,
+      'WHERE status = "worked"',
+      'SORT continent ASC',
+      '```',
+      '',
+      '---',
+      '',
+      '## 2 — Entities nach Kontinent gruppiert',
+      '',
+      '```dataview',
+      'TABLE rows.file.link AS "Entity", rows.prefix AS "Prefix", rows.total_qsos AS "QSOs"',
+      `FROM "${dvFolder}"`,
+      'WHERE status != "missing"',
+      'GROUP BY continent',
+      'SORT continent ASC',
+      '```',
+      '',
+      '---',
+      '',
+      '## 3 — Top 20 nach QSO-Zahl',
+      '',
+      '```dataview',
+      'TABLE prefix, continent, total_qsos AS "QSOs", status',
+      `FROM "${dvFolder}"`,
+      'WHERE status != "missing"',
+      'SORT total_qsos DESC',
+      'LIMIT 20',
+      '```',
+      '',
+      '---',
+      '',
+      '## 4 — Entities ohne LoTW-Bestätigung',
+      '',
+      '```dataview',
+      'TABLE prefix, continent, total_qsos AS "QSOs", last_qso AS "Last QSO"',
+      `FROM "${dvFolder}"`,
+      'WHERE lotw = false AND status = "confirmed"',
+      'SORT continent ASC',
+      '```',
+      '',
+      '---',
+      '',
+      '## 5 — Wikipedia-Links aller Entities',
+      '',
+      '```dataview',
+      'TABLE prefix, continent, total_qsos AS "QSOs", wikipedia AS "Wikipedia"',
+      `FROM "${dvFolder}"`,
+      'WHERE wikipedia != null',
+      'SORT country ASC',
+      '```',
+      '',
+      '---',
+      '',
+      '## 6 — Aktivitäts-Timeline (letzte 15 QSOs)',
+      '',
+      '```dataview',
+      'TABLE country, prefix, last_qso AS "Last QSO", total_qsos AS "QSOs"',
+      `FROM "${dvFolder}"`,
+      'WHERE last_qso != null',
+      'SORT last_qso DESC',
+      'LIMIT 15',
+      '```',
+      '',
+      '---',
+      '',
+      `*Queries für [[DXCC Overview]] · DK9RC · Exportiert ${exportDate}*`,
+    ].join('\n')
+
+    files.push({
+      name: 'DXCC Dataview Queries.md',
+      content: dataviewContent,
+    })
+
+    // ── Not Worked Overview ──────────────────────────────────────────────
+    const workedIds = new Set(workedEntries.map(([id]) => id))
+    const allActive = getAllActiveDXCC()
+    const notWorkedEntities = allActive
+      .filter(entity => !workedIds.has(entity.id))
+      .sort((a, b) => a.cont.localeCompare(b.cont) || a.name.localeCompare(b.name))
+
+    const CONT_NAMES = {
+      AF: 'Africa', AN: 'Antarctica', AS: 'Asia',
+      EU: 'Europe', NA: 'North America', OC: 'Oceania', SA: 'South America'
+    }
+
+    // Group by continent
+    const notWorkedByCont = {}
+    notWorkedEntities.forEach(entity => {
+      const cont = entity.cont || '??'
+      if (!notWorkedByCont[cont]) notWorkedByCont[cont] = []
+      notWorkedByCont[cont].push(entity)
+    })
+
+    const notWorkedFrontmatter = [
+      '---',
+      'title: DXCC Overview - Not Worked',
+      `callsign: DK9RC`,
+      `total_not_worked: ${notWorkedEntities.length}`,
+      `export_date: ${exportDate}`,
+      'tags:',
+      '  - dxcc',
+      '  - amateur-radio',
+      '  - not-worked',
+      '  - overview',
+      '---',
+    ].join('\n')
+
+    const notWorkedBody = [
+      '# DXCC Overview \u2014 Not Worked',
+      '',
+      `> [!warning] ${notWorkedEntities.length} Entities noch nicht gearbeitet`,
+      `> Stand: ${exportDate} \u00b7 Gearbeitet: ${workedEntries.length} \u00b7 Gesamt aktiv: ${allActive.length}`,
+      '',
+      ...Object.entries(notWorkedByCont)
+        .sort((a, b) => (CONT_NAMES[a[0]] || a[0]).localeCompare(CONT_NAMES[b[0]] || b[0]))
+        .flatMap(([cont, entities]) => [
+          `## ${CONT_NAMES[cont] || cont} (${entities.length})`,
+          '',
+          '| Entity | DXCC# | Wikipedia |',
+          '|--------|-------|-----------|',
+          ...entities.map(entity => {
+            const wpUrl = getWikipediaUrl(entity.id)
+            const wpLink = wpUrl ? `[\u2197](${wpUrl})` : '\u2014'
+            return `| ${entity.name} | ${entity.id} | ${wpLink} |`
+          }),
+          '',
+        ]),
+      '---',
+      `*Generiert von DXCC Analyzer Pro \u00b7 ${exportTime} \u00b7 73 de DK9RC*`,
+    ].join('\n')
+
+    files.push({
+      name: 'DXCC Overview - Not Worked.md',
+      content: notWorkedFrontmatter + '\n\n' + notWorkedBody,
+    })
+
+    // ── Build ZIP and trigger download ───────────────────────────────────
+    // Simple ZIP builder (no external library needed)
+    // Uses the File System Access API if available, otherwise falls back to
+    // downloading files individually (up to a user-defined batch).
+    // For simplicity we use a pure-JS micro-zip approach.
+    const utf8 = new TextEncoder()
+
+    const toU32LE = (n) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n, true); return b }
+    const toU16LE = (n) => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, n, true); return b }
+
+    // CRC-32 table
+    const crcTable = (() => {
+      const t = new Uint32Array(256)
+      for (let i = 0; i < 256; i++) {
+        let c = i
+        for (let j = 0; j < 8; j++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1
+        t[i] = c
+      }
+      return t
+    })()
+    const crc32 = (data) => {
+      let crc = 0xFFFFFFFF
+      for (let i = 0; i < data.length; i++) crc = crcTable[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8)
+      return (crc ^ 0xFFFFFFFF) >>> 0
+    }
+
+    const concat = (...arrays) => {
+      const total = arrays.reduce((s, a) => s + a.length, 0)
+      const out = new Uint8Array(total)
+      let offset = 0
+      for (const a of arrays) { out.set(a, offset); offset += a.length }
+      return out
+    }
+
+    const localHeaders = []
+    const centralHeaders = []
+    let offset = 0
+    const dosDate = (() => {
+      const d = new Date()
+      return ((d.getFullYear() - 1980) << 25 | (d.getMonth() + 1) << 21 | d.getDate() << 16 |
+               d.getHours() << 11 | d.getMinutes() << 5 | (d.getSeconds() >> 1)) >>> 0
+    })()
+    const dosDateBytes = toU32LE(dosDate)
+
+    for (const file of files) {
+      const nameBytes = utf8.encode(file.name)
+      const dataBytes = utf8.encode(file.content)
+      const crc = crc32(dataBytes)
+      const localHeader = concat(
+        new Uint8Array([0x50, 0x4B, 0x03, 0x04]), // local file header signature
+        toU16LE(20),         // version needed
+        toU16LE(0),          // general purpose bit flag
+        toU16LE(0),          // compression method (stored)
+        dosDateBytes,        // last mod time+date
+        toU32LE(crc),        // crc-32
+        toU32LE(dataBytes.length), // compressed size
+        toU32LE(dataBytes.length), // uncompressed size
+        toU16LE(nameBytes.length),
+        toU16LE(0),          // extra field length
+        nameBytes,
+        dataBytes,
+      )
+      const centralHeader = concat(
+        new Uint8Array([0x50, 0x4B, 0x01, 0x02]), // central directory signature
+        toU16LE(20),         // version made by
+        toU16LE(20),         // version needed
+        toU16LE(0),          // general purpose bit flag
+        toU16LE(0),          // compression method
+        dosDateBytes,
+        toU32LE(crc),
+        toU32LE(dataBytes.length),
+        toU32LE(dataBytes.length),
+        toU16LE(nameBytes.length),
+        toU16LE(0),          // extra field length
+        toU16LE(0),          // file comment length
+        toU16LE(0),          // disk number start
+        toU16LE(0),          // internal attributes
+        toU32LE(0),          // external attributes
+        toU32LE(offset),     // relative offset of local header
+        nameBytes,
+      )
+      localHeaders.push(localHeader)
+      centralHeaders.push(centralHeader)
+      offset += localHeader.length
+    }
+
+    const centralStart = offset
+    const centralSize = centralHeaders.reduce((s, h) => s + h.length, 0)
+    const eocd = concat(
+      new Uint8Array([0x50, 0x4B, 0x05, 0x06]), // end of central directory signature
+      toU16LE(0),            // disk number
+      toU16LE(0),            // disk with start of central directory
+      toU16LE(files.length), // entries on this disk
+      toU16LE(files.length), // total entries
+      toU32LE(centralSize),
+      toU32LE(centralStart),
+      toU16LE(0),            // comment length
+    )
+
+    const zipBytes = concat(...localHeaders, ...centralHeaders, eocd)
+    const blob = new Blob([zipBytes], { type: 'application/zip' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `dxcc-obsidian-${exportDate}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // --- Feature 12a: JSON Export ---
   const exportToJSON = () => {
     if (!filteredData.length) return
@@ -1277,7 +1718,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.3.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.4.0</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -1859,6 +2300,18 @@ function DXCCAnalyzer() {
               >
                 <Radio className="w-5 h-5" />
                 ADIF
+              </button>
+            )}
+
+            {/* Feature 13: Export Obsidian */}
+            {logData && (
+              <button
+                onClick={exportToObsidian}
+                title="Export DXCC notes as Obsidian Markdown (ZIP)"
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 rounded-lg transition flex items-center gap-2 print:hidden"
+              >
+                <BookOpen className="w-5 h-5" />
+                Obsidian
               </button>
             )}
 
