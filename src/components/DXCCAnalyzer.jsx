@@ -1538,6 +1538,12 @@ function DXCCAnalyzer() {
         return
       }
 
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 's') {
+        e.preventDefault()
+        handleShare()
+        return
+      }
+
       if (!showAll && totalPages > 1) {
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
           e.preventDefault()
@@ -1550,6 +1556,7 @@ function DXCCAnalyzer() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, showAll, totalPages])
 
   /**
