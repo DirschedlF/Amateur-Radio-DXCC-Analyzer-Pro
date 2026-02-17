@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.4.0**
+**Version 2.4.1**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 

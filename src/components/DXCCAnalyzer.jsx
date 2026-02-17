@@ -1429,7 +1429,8 @@ function DXCCAnalyzer() {
         eqsl: !!getDisplayConfirmation(data, 'eqsl'),
         qrz:  !!getDisplayConfirmation(data, 'qrz'),
         qsl:  !!getDisplayConfirmation(data, 'qsl'),
-      }
+      },
+      wikipediaUrl: getWikipediaUrl(id) || null
     }))
     const json = JSON.stringify({ exportedAt: new Date().toISOString(), count: output.length, entities: output }, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
@@ -1579,7 +1580,7 @@ function DXCCAnalyzer() {
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
     if (filterDatePreset !== 'all') filters.push(`Date: ${getDateFilterLabel()}`)
 
-    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale']
+    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale', 'Wikipedia']
     const rows = filteredData.map(([id, data]) => {
       const isStale = BANDS.some(band =>
         getDisplayBandStatus(data, band) === 'W' && isOlderThan5Years(data.bandLastQso?.[band])
@@ -1600,7 +1601,8 @@ function DXCCAnalyzer() {
         formatQsoDate(data.lastQso) || '',
         data.lastQsoBand || '',
         data.lastQsoCall || '',
-        isStale ? 'Yes' : 'No'
+        isStale ? 'Yes' : 'No',
+        getWikipediaUrl(id) || ''
       ]
     })
 
@@ -1718,7 +1720,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.4.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.4.1</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -2429,7 +2431,12 @@ function DXCCAnalyzer() {
                         </span>
                         {data.deleted && <span className="ml-2 text-xs text-red-400 font-normal">(deleted)</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-400">{id}</td>
+                      <td className="px-4 py-3 text-gray-400">
+                        {(() => { const url = getWikipediaUrl(id); return url
+                          ? <a href={url} target="_blank" rel="noopener noreferrer" title={`Wikipedia: ${data.country}`} className="hover:text-blue-400 transition cursor-pointer">{id} <span className="text-xs">&#x1F517;</span></a>
+                          : id })()
+                        }
+                      </td>
                       <td className="px-3 py-3 text-gray-400 font-mono">{data.prefix || '-'}</td>
                       <td className="px-3 py-3 text-center text-gray-400">{data.mostWantedRank || '-'}</td>
                       <td className="px-4 py-3 text-gray-400">{data.cont}</td>
