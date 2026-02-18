@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.1.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.4.1** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -34,9 +34,35 @@
 - **Intelligente Filter-Interaktion**: Filter arbeiten kontextbezogen zusammen
 - **Aktive Filter-Tags** mit visuellen Chips und Ein-Klick-Entfernung
 
+### 🕐 **Letztes QSO Tracking & Veraltete Bestätigungen** *(NEU in v2.3.0)*
+- **Hover-Tooltips** auf Ländernamen und Band-Zellen zeigen letztes QSO-Datum, Band und Rufzeichen
+- **Veraltete Bestätigungs-Warnung** — Uhr-Symbol bei W-Status-Bändern ohne Bestätigung seit 5+ Jahren
+- **Erweiterter CSV-Export** mit neuen Spalten: Letztes QSO-Datum, Band, Rufzeichen, Stale-Indikator
+- **Intelligente CSV-Dateinamen** — aktive Filter werden automatisch eingebettet (z.B. `dxcc-analysis_cw_confirmed_eu.csv`)
+- **"Nicht Gearbeitet" Chart-Segment** — "Alle Gebiete"-Ansicht zeigt ungearbeitete Gebiete als drittes Segment in Kontinent- und Band-Charts
+
+### 🔗 **Teilen, Export & Tastaturkürzel** *(NEU in v2.2.0)*
+- **Share-Link** — URL mit allen aktiven Filtern Base64-kodiert kopieren; jeder mit dem Link sieht exakt dieselbe Ansicht (`Strg+Umschalt+S`)
+- **JSON-Export** — gefilterte Gebietsdaten als JSON für externe Werkzeuge exportieren
+- **ADIF-Export** — QSOs gefilterter Gebiete als gültige ADIF-Datei exportieren
+- **Spalten-Konfiguration** — einzelne Band- und Bestätigungsspalten ein-/ausblenden; Einstellungen bleiben in localStorage erhalten
+- **Tastaturkürzel** — `/` fokussiert Suche, `Esc` löscht sie, `←`/`→` navigiert Seiten, `Strg+Umschalt+S` kopiert Share-Link
+
+### 🌿 **Obsidian-Export** *(NEU in v2.4.0)*
+- **Export nach Obsidian** — ZIP-Datei mit Obsidian Flavored Markdown-Notizen für den gesamten DXCC-Log
+- **Eine Notiz pro Gebiet** — YAML-Frontmatter, Obsidian-Callouts, Band-Status-Tabelle mit letzten QSO-Daten, QSL-Plattform-Icons
+- **Übersichts-Notizen** — `DXCC Overview.md` mit Top-10-Tabelle und vollständiger Gebietsliste; `DXCC Overview - Not Worked.md` nach Kontinent gruppiert
+- **Fertige Dataview-Abfragen** — 6 Abfragen enthalten (unbestätigt, nach Kontinent, Top 20, kein LoTW, Wikipedia-Links, Zeitstrahl)
+- **Sicherer Re-Export** — alle Dateien können überschrieben werden, ohne vom Nutzer hinzugefügte Inhalte zu verlieren; respektiert alle aktiven Filter
+
+### 🌐 **Wikipedia-Integration** *(NEU in v2.4.1)*
+- **Wikipedia-Links** in der Gebiets-Tabelle — anklickbare Links zum Wikipedia-Artikel jedes DXCC-Gebiets
+- **Wikipedia-URLs im CSV- und JSON-Export** — für Verwendung in externen Werkzeugen und Workflows
+- **Manuell gepflegte Slugs** für alle Sonderfälle (Abkürzungen, Sonderzeichen, historische Namen, Begriffsklärungen)
+
 ### 📤 **Professioneller Export & Reporting**
-- **Export gefilterter Analyse nach CSV** mit vollständigem Filter-Kontext im Header
-- **Druckfertige Reports** (A4 Querformat, alle 21 Spalten sichtbar)
+- **Export gefilterter Analyse nach CSV** mit vollständigem Filter-Kontext im Header und filterbewusstem Dateinamen
+- **Druckfertige Reports** (A4 Querformat, alle 21 Spalten sichtbar); zeigt letztes QSO-Datum im Ausdruck
 - **Dediziertes Chart-Drucken** (4 Charts auf einer Seite)
 - **PDF-Generierung** über Browser-Druckdialog
 - **Alle Exports respektieren Ihre aktuellen Filter** - Was Sie sehen, ist was Sie bekommen
@@ -52,7 +78,8 @@
 - **Sortierbare Spalten** mit intelligenten Vorgaben (21 Spalten insgesamt)
 - **Band-Spalten-Hervorhebung** bei aktivem Band-Filter (blauer Rahmen + gedimmte andere Bänder)
 - **Sticky Headers** für einfache Navigation bei großen Datensätzen
-- **Konfigurierbare Paginierung** (10/15/25/50/Alle Einträge)
+- **Konfigurierbare Paginierung** (10/15/25/50/Alle Einträge); Einstellung bleibt in localStorage erhalten
+- **Spalten-Konfiguration** — einzelne Bänder und Bestätigungsplattformen ein-/ausblenden; bleibt in localStorage erhalten
 - **Visuelle Filter-Chips** mit individuellen Entfernen-Buttons und "Alle zurücksetzen"
 - **Responsives Design** das alle Spalten auf dem Bildschirm unterbringt
 - **Datumsbereich-Vorlagen** (Dieses Jahr, Letztes Jahr, Letzte 12 Monate) + benutzerdefinierter Bereich
@@ -85,9 +112,13 @@
 2. **GDXF Most Wanted Integration** - Kein anderer ADIF-Analyzer bietet dies
 3. **Betriebsarten-abhängige Rankings** - Rankings passen sich automatisch an Ihre Filter-Auswahl an
 4. **Enterprise-Grade Performance** - Getestet mit 170.000+ QSOs
-5. **Umfassender Export** - CSV-Exports enthalten Filter-Kontext für Reproduzierbarkeit
+5. **Umfassender Export** - CSV, JSON, ADIF und Obsidian-Export mit Filter-Kontext, Last-QSO-Spalten und filterbewussten Dateinamen
 6. **Kontext-sensitive Darstellung** - Alle Daten passen sich dynamisch an aktive Filter an
 7. **Professioneller Druck-Support** - A4-Querformat-Reports mit allen 21 Spalten
+8. **Veraltete Bestätigungs-Erkennung** - W-Status-Bänder ohne Bestätigung seit 5+ Jahren sofort erkennen
+9. **Teilbare Filter-Ansichten** - Exakte Analyse-Ansichten per URL mit allen kodierten Filtern teilen
+10. **Obsidian-Integration** - Gesamten DXCC-Log als strukturiertes Obsidian-Vault exportieren
+11. **Wikipedia-Links** - Direkte Links zu Wikipedia-Artikeln für jedes DXCC-Gebiet
 
 ---
 
@@ -152,7 +183,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.1.0 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.4.1 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland
