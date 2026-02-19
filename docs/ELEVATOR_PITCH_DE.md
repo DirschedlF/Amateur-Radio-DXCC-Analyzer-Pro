@@ -60,9 +60,11 @@
 - **Wikipedia-URLs im CSV- und JSON-Export** — für Verwendung in externen Werkzeugen und Workflows
 - **Manuell gepflegte Slugs** für alle Sonderfälle (Abkürzungen, Sonderzeichen, historische Namen, Begriffsklärungen)
 
-### 🗄️ **Log4OM SQLite-Import** *(NEU in v2.5.0)*
-- **Direkter Datenbank-Import** — öffnen Sie Ihre Log4OM 2 `.SQLite`-Datei ohne vorherigen ADIF-Export
-- **Native Bestätigungs-Daten** — liest Log4OM's strukturierte Bestätigungseinträge (LOTW, eQSL, QRZ.com, Paper QSL) direkt aus der Datenbank
+### 🗄️ **Datenbank-Import** *(Log4OM v2.5.0, HRD v2.5.1)*
+
+- **Log4OM 2** — öffnen Sie Ihre `.SQLite`-Datei direkt, mit nativen JSON-strukturierten Bestätigungsdaten
+- **Ham Radio Deluxe** — öffnen Sie Ihre `.hrdsql`-Logbuchdatei direkt, mit Standard-Bestätigungsfeldern
+- **Auto-Erkennung** — der Analyzer erkennt den Datenbanktyp automatisch anhand der Tabellennamen
 - **Alle Filter unterstützt** — Betriebsart, Band, Operator, Datumsbereich, Bestätigungsplattform, Kontinent funktionieren identisch zu ADIF-Importen
 - **100% Client-seitig** — betrieben durch sql.js (WebAssembly SQLite); Ihre Datenbank verlässt niemals Ihren Browser
 
@@ -125,7 +127,7 @@
 9. **Teilbare Filter-Ansichten** - Exakte Analyse-Ansichten per URL mit allen kodierten Filtern teilen
 10. **Obsidian-Integration** - Gesamten DXCC-Log als strukturiertes Obsidian-Vault exportieren
 11. **Wikipedia-Links** - Direkte Links zu Wikipedia-Artikeln für jedes DXCC-Gebiet
-12. **Log4OM SQLite-Import** - Direkter Datenbank-Import, kein ADIF-Export-Schritt erforderlich (NEU in v2.5.0)
+12. **Datenbank-Import** - Direkter Log4OM- und HRD-Datenbank-Import, kein ADIF-Export-Schritt erforderlich
 
 ---
 

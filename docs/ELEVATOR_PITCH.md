@@ -60,9 +60,11 @@
 - **Wikipedia URLs in CSV and JSON export** — included for use in external tools and workflows
 - **Manually curated slugs** for all edge cases (abbreviations, special characters, historical names, disambiguation)
 
-### 🗄️ **Log4OM SQLite Import** *(NEW in v2.5.0)*
-- **Direct database import** — open your Log4OM 2 `.SQLite` file without any ADIF export step
-- **Native confirmation data** — reads Log4OM's structured confirmation records (LOTW, eQSL, QRZ.com, Paper QSL) directly from the database
+### 🗄️ **Database Import** *(Log4OM v2.5.0, HRD v2.5.1)*
+
+- **Log4OM 2** — open your `.SQLite` file directly, with native JSON-structured confirmation data
+- **Ham Radio Deluxe** — open your `.hrdsql` logbook directly, with standard confirmation fields
+- **Auto-detection** — the analyzer identifies the database type automatically by table names
 - **All filters supported** — mode, band, operator, date range, confirmation platform, continent work identically to ADIF imports
 - **100% client-side** — powered by sql.js (WebAssembly SQLite); your database never leaves your browser
 
@@ -125,7 +127,7 @@
 9. **Shareable Filter Views** - Share exact analysis views via URL with all filters encoded
 10. **Obsidian Integration** - Export your entire DXCC log as a structured Obsidian vault
 11. **Wikipedia Links** - Direct links to Wikipedia articles for every DXCC entity
-12. **Log4OM SQLite Import** - Direct database import, no ADIF export step required (new in v2.5.0)
+12. **Database Import** - Direct Log4OM and HRD database import, no ADIF export step required
 
 ---
 

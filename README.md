@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.5.0**
+**Version 2.5.1**
 
-A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
+A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, and Ham Radio Deluxe (HRD) databases. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -102,6 +102,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
   - Safe to re-export and overwrite; no user-editable sections in generated files
 - **Wikipedia Links** *(NEW in v2.4.1)* - Clickable Wikipedia links for every DXCC entity in the table; Wikipedia URLs also included in CSV and JSON exports
 - **Log4OM SQLite Import** *(NEW in v2.5.0)* - Direct import of Log4OM 2 database files without requiring an ADIF export; powered by sql.js (client-side WASM)
+- **HRD Database Import** *(NEW in v2.5.1)* - Direct import of Ham Radio Deluxe `.hrdsql` logbook databases; auto-detected alongside Log4OM
 - **Share Link** - Copy a URL with all active filters encoded (Base64); recipients restore the exact same view
 - **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page; shows Last QSO date next to each country
 - **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
@@ -169,8 +170,8 @@ The optimized build will be in the `dist/` directory.
 ## Usage
 
 1. **Upload Your Logbook**
-   - Click "Choose File" and select your ADIF file (.adi or .adif) **or** your Log4OM database (.SQLite)
-   - Supported formats: ADIF 3.x.x (standard amateur radio interchange format), Log4OM SQLite database
+   - Click "Choose File" and select your ADIF file (.adi or .adif), Log4OM database (.SQLite), or HRD logbook (.hrdsql)
+   - Supported formats: ADIF 3.x.x, Log4OM SQLite database, Ham Radio Deluxe database
 
 2. **View Your Statistics**
    - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, DXCC Missing, and Confirmation Rate
@@ -207,16 +208,26 @@ The optimized build will be in the `dist/` directory.
 
 ## ADIF Field Support
 
-### Log4OM SQLite Import *(NEW in v2.5.0)*
+### Database Import *(Log4OM v2.5.0+, HRD v2.5.1+)*
 
-In addition to ADIF files, DXCC Analyzer Pro now supports **direct import of Log4OM 2 database files** (`.SQLite`):
+In addition to ADIF files, DXCC Analyzer Pro supports **direct import of logging software databases**:
+
+**Log4OM 2** (`.SQLite`):
 
 - **No ADIF export step needed** — open your Log4OM database directly
 - **Native confirmation data** — reads Log4OM's JSON-structured confirmation records (LOTW, eQSL, QRZ.com, Paper QSL)
-- **All filters supported** — mode, band, operator, date range, confirmation platform, continent
-- **Powered by sql.js** — fully client-side WASM SQLite engine; your database never leaves your browser
 
-Drag and drop your `Log4OM.SQLite` file or use "Choose File" — the analyzer auto-detects the file type.
+**Ham Radio Deluxe** (`.hrdsql`):
+
+- **Direct logbook import** — open your HRD `.hrdsql` file without ADIF export
+- **Standard confirmation fields** — reads LOTW, eQSL, QRZ, and Paper QSL status directly from HRD columns
+
+**Common features:**
+
+- **All filters supported** — mode, band, operator, date range, confirmation platform, continent
+- **Auto-detection** — the analyzer detects the database type automatically by table names
+- **Powered by sql.js** — fully client-side WASM SQLite engine; your database never leaves your browser
+- **Read-only access** — database opened with `PRAGMA query_only = ON`; integrity-checked before reading
 
 ### Required Fields
 - `DXCC` - DXCC Entity ID (primary grouping key)
@@ -297,11 +308,12 @@ Country names and continents are automatically resolved from the built-in DXCC l
 |--------|--------|-------|
 | **Log4OM** Export | ✅ Works | Full support including Log4OM-specific QRZ fields |
 | **Log4OM** SQLite DB | ✅ Works | Direct database import (new in v2.5.0), no ADIF export needed |
+| **Ham Radio Deluxe** `.hrdsql` DB | ✅ Works | Direct database import (new in v2.5.1), no ADIF export needed |
 | **WaveLog** Export | ✅ Works | Country/continent resolved via built-in lookup table |
 | **QRZ.com** Export | ✅ Works | QRZ confirmation fields fully recognized |
 | **LOTW** Export | ✅ Works | LOTW confirmation status correctly detected |
 | **Club Log** Export | ✅ Works | Confirmations displayed as Paper QSL |
-| **Ham Radio Deluxe** Export | ✅ Works | Full ADIF support |
+| **Ham Radio Deluxe** ADIF Export | ✅ Works | Full ADIF support |
 | **World Radio League** Export | ⚠️ Partial | Works, but no confirmation status included — all QSOs shown as Worked only |
 | **WSJT-X** Log (wsjtx_log.adi) | ❌ Not supported | WSJT-X ADIF logs do not include the DXCC entity field, which is required for analysis |
 | **eQSL** Export | ❌ Not supported | eQSL ADIF exports do not include the DXCC entity field, which is required for analysis |
@@ -368,13 +380,14 @@ Amateur Radio DXCC Analyzer Pro/
 The application uses a **single-file component architecture** for the main analyzer:
 
 1. **ADIF Parser** - Regex-based extraction of ADIF tags
-2. **Analysis Engine** - Band matrix calculation with per-band/per-platform QSO tracking and confirmation logic
-3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band × continent heatmap data (respects column visibility)
-5. **React Components** - UI rendering with hooks for state management
-6. **Export Module** - CSV (RFC-4180), JSON, and ADIF export from filtered data
-7. **Share Module** - URL-based filter state encoding/decoding (Base64)
-8. **Column Config Module** - Persistent band/confirmation column visibility via localStorage
+2. **SQLite Parser** - Log4OM and HRD database reader via sql.js WASM (auto-detected by table names)
+3. **Analysis Engine** - Band matrix calculation with per-band/per-platform QSO tracking and confirmation logic
+4. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
+5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band × continent heatmap data (respects column visibility)
+6. **React Components** - UI rendering with hooks for state management
+7. **Export Module** - CSV (RFC-4180), JSON, and ADIF export from filtered data
+8. **Share Module** - URL-based filter state encoding/decoding (Base64)
+9. **Column Config Module** - Persistent band/confirmation column visibility via localStorage
 
 See `CLAUDE.md` for detailed architecture documentation.
 
@@ -470,6 +483,7 @@ Future enhancements under consideration:
 - [x] Obsidian vault export (ZIP with entity notes, overview, not-worked list, Dataview queries)
 - [x] Wikipedia links in table, CSV, and JSON export (curated slugs for all special cases)
 - [x] Log4OM SQLite direct import (no ADIF export step required)
+- [x] Ham Radio Deluxe (.hrdsql) direct database import with auto-detection
 
 ---
 
