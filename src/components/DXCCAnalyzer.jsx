@@ -5,8 +5,8 @@ import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEnti
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
 import initSqlJs from 'sql.js'
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
-import MDBReader from 'mdb-reader'
-import { Buffer } from 'buffer'
+// mdb-reader and buffer are dynamically imported in parseDXKeeperFile() to avoid
+// Node.js global polyfill issues on initial page load
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -374,10 +374,11 @@ function DXCCAnalyzer() {
    *   APP_DXKeeper_LotW_QSL_RCVD→LOTW_QSL_RCVD, APP_DXKeeper_EQSL_QSL_RCVD→EQSL_QSL_RCVD,
    *   QSL_Rcvd→QSL_RCVD, APP_DXKeeper_QRZcom_QSL_Rcvd→QRZCOM_QSL_RCVD
    * @param {ArrayBuffer} arrayBuffer - Raw file bytes
-   * @returns {Array} Array of QSO objects compatible with parseADIF() output
+   * @returns {Promise<Array>} Array of QSO objects compatible with parseADIF() output
    */
-  const parseDXKeeperFile = (arrayBuffer) => {
-    const buf = Buffer.from(new Uint8Array(arrayBuffer))
+  const parseDXKeeperFile = async (arrayBuffer) => {
+    const { default: MDBReader } = await import('mdb-reader')
+    const buf = globalThis.Buffer.from(new Uint8Array(arrayBuffer))
     const reader = new MDBReader(buf)
     const tableNames = reader.getTableNames()
 
@@ -626,9 +627,9 @@ function DXCCAnalyzer() {
 
     if (isMDB) {
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const qsos = parseDXKeeperFile(e.target.result)
+          const qsos = await parseDXKeeperFile(e.target.result)
           setLogData({ qsos, totalQSOs: qsos.length })
           setCurrentPage(1)
         } catch (err) {

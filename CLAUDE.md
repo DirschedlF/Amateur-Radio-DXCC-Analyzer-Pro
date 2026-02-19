@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.5.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, and Ham Radio Deluxe (HRD) databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.6.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Build Tool**: Vite (recommended for fast development)
 - **Language**: JavaScript (JSX)
 - **SQLite Engine**: sql.js (Emscripten/WASM) — bundled locally via npm, no CDN/network dependency
+- **Access Engine**: mdb-reader (pure JS) — reads DXKeeper `.mdb`/`.accdb` files; no WASM, works in standalone build
 
 ## Development Commands
 
@@ -142,6 +143,41 @@ const CT_MAP = {
 **Key difference from Log4OM**: HRD stores confirmations as individual columns (standard ADIF field names with `COL_` prefix) — no JSON parsing needed.
 
 **Output**: `parseSQLiteFile(arrayBuffer)` returns the same QSO array format as `parseADIF()`, so the analysis engine (`analyzeQSOs()`) requires zero changes.
+
+### DXKeeper Access Database Parsing (v2.6.0+)
+
+**Supported Formats**: DXKeeper `.mdb` (Access 97–2003) and `.accdb` (Access 2010–2019)
+
+**Auto-Detection**: File extension `.mdb` or `.accdb` (case-insensitive) triggers the DXKeeper code path.
+
+**Library**: `mdb-reader` — pure JavaScript Microsoft Access reader, no WebAssembly required. Works in standalone build. Requires `Buffer` polyfill (`buffer` npm package) set globally via `main.jsx`. `process` polyfill set via inline `<script>` in `index.html`.
+
+**Table Used**: `QSOs` (126 columns). `QSO_Begin` is a JavaScript `Date` object; DXKeeper uses year 4000 as null-date placeholder (skipped).
+
+**Field Mapping**:
+
+| Access Column | Maps To | Conversion |
+| --- | --- | --- |
+| `DXCCID` (INTEGER) | `DXCC` | `.toString()` |
+| `Band` | `BAND` | Lowercase (`"17M"` → `"17m"`) |
+| `QSO_Begin` (Date) | `QSO_DATE` | UTC date → `"YYYYMMDD"`; skip if year ≥ 3000 |
+| `Mode` | `MODE` | Direct |
+| `CONT` | `CONT` | Direct (lookup table still takes priority) |
+| `STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
+| `Operator` | `OPERATOR` | Direct |
+| `APP_DXKeeper_LotW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`R`/`N`) |
+| `APP_DXKeeper_EQSL_QSL_RCVD` | `EQSL_QSL_RCVD` | Direct |
+| `QSL_Rcvd` | `QSL_RCVD` | Direct |
+| `APP_DXKeeper_QRZcom_QSL_Rcvd` | `QRZCOM_QSL_RCVD` | Direct |
+
+**Key difference from HRD/Log4OM**: `COUNTRY` not stored — resolved from `lookupDXCC(DXCCID)` in `analyzeQSOs()`. `R` = Requested (not confirmed); only `Y`/`V` count as confirmed (handled by existing `isConfirmed()`).
+
+**Browser Polyfills** (required by mdb-reader's dependencies `cipher-base`, `readable-stream`):
+
+- `process` global: inline `<script>` in `index.html` (runs before any module)
+- `Buffer` global: static import in `src/main.jsx` → `globalThis.Buffer = Buffer`
+
+**Output**: `parseDXKeeperFile(arrayBuffer)` returns the same QSO array format as `parseADIF()`.
 
 **Regex Pattern**: `<FIELDNAME:LENGTH[:TYPE]>VALUE`
 - Case-insensitive field names

@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.5.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.6.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -60,13 +60,14 @@
 - **Wikipedia-URLs im CSV- und JSON-Export** — für Verwendung in externen Werkzeugen und Workflows
 - **Manuell gepflegte Slugs** für alle Sonderfälle (Abkürzungen, Sonderzeichen, historische Namen, Begriffsklärungen)
 
-### 🗄️ **Datenbank-Import** *(Log4OM v2.5.0, HRD v2.5.1)*
+### 🗄️ **Datenbank-Import** *(Log4OM v2.5.0, HRD v2.5.1, DXKeeper v2.6.0)*
 
 - **Log4OM 2** — öffnen Sie Ihre `.SQLite`-Datei direkt, mit nativen JSON-strukturierten Bestätigungsdaten
 - **Ham Radio Deluxe** — öffnen Sie Ihre `.hrdsql`-Logbuchdatei direkt, mit Standard-Bestätigungsfeldern
-- **Auto-Erkennung** — der Analyzer erkennt den Datenbanktyp automatisch anhand der Tabellennamen
+- **DXKeeper** — öffnen Sie Ihre `.mdb`/`.accdb` Access-Datenbank direkt, mit vollem LOTW/eQSL/QRZ/Paper QSL-Support
+- **Auto-Erkennung** — der Analyzer erkennt den Datenbanktyp automatisch anhand der Dateiendung und Tabellennamen
 - **Alle Filter unterstützt** — Betriebsart, Band, Operator, Datumsbereich, Bestätigungsplattform, Kontinent funktionieren identisch zu ADIF-Importen
-- **100% Client-seitig** — betrieben durch sql.js (WebAssembly SQLite); Ihre Datenbank verlässt niemals Ihren Browser
+- **100% Client-seitig** — sql.js (WebAssembly SQLite) für Log4OM/HRD; mdb-reader (reines JavaScript) für DXKeeper; Ihre Datenbank verlässt niemals Ihren Browser
 
 ### 📤 **Professioneller Export & Reporting**
 - **Export gefilterter Analyse nach CSV** mit vollständigem Filter-Kontext im Header und filterbewusstem Dateinamen
@@ -127,7 +128,7 @@
 9. **Teilbare Filter-Ansichten** - Exakte Analyse-Ansichten per URL mit allen kodierten Filtern teilen
 10. **Obsidian-Integration** - Gesamten DXCC-Log als strukturiertes Obsidian-Vault exportieren
 11. **Wikipedia-Links** - Direkte Links zu Wikipedia-Artikeln für jedes DXCC-Gebiet
-12. **Datenbank-Import** - Direkter Log4OM- und HRD-Datenbank-Import, kein ADIF-Export-Schritt erforderlich
+12. **Datenbank-Import** - Direkter Log4OM-, HRD- und DXKeeper-Datenbank-Import, kein ADIF-Export-Schritt erforderlich
 
 ---
 
@@ -192,7 +193,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.5.0 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.6.0 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland

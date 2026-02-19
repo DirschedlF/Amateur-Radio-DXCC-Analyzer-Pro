@@ -2,6 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Node.js global polyfills required by mdb-reader dependencies (cipher-base, readable-stream) -->
+    <script>
+      if (typeof process === 'undefined') {
+        window.process = { env: {}, browser: true, version: 'v18.0.0', platform: 'browser', versions: {} }
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Amateur Radio DXCC Analyzer Pro - Analyze your ADIF logbooks client-side" />

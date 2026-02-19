@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch
 
-**Version 2.5.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.6.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -60,13 +60,14 @@
 - **Wikipedia URLs in CSV and JSON export** — included for use in external tools and workflows
 - **Manually curated slugs** for all edge cases (abbreviations, special characters, historical names, disambiguation)
 
-### 🗄️ **Database Import** *(Log4OM v2.5.0, HRD v2.5.1)*
+### 🗄️ **Database Import** *(Log4OM v2.5.0, HRD v2.5.1, DXKeeper v2.6.0)*
 
 - **Log4OM 2** — open your `.SQLite` file directly, with native JSON-structured confirmation data
 - **Ham Radio Deluxe** — open your `.hrdsql` logbook directly, with standard confirmation fields
-- **Auto-detection** — the analyzer identifies the database type automatically by table names
+- **DXKeeper** — open your `.mdb`/`.accdb` Access database directly, with full LOTW/eQSL/QRZ/Paper QSL support
+- **Auto-detection** — the analyzer identifies the database type automatically by file extension and table names
 - **All filters supported** — mode, band, operator, date range, confirmation platform, continent work identically to ADIF imports
-- **100% client-side** — powered by sql.js (WebAssembly SQLite); your database never leaves your browser
+- **100% client-side** — sql.js (WebAssembly SQLite) for Log4OM/HRD; mdb-reader (pure JS) for DXKeeper; your database never leaves your browser
 
 ### 📤 **Professional Export & Reporting**
 - **Export filtered analysis to CSV** with full filter context in header and filter-aware filename
@@ -127,14 +128,14 @@
 9. **Shareable Filter Views** - Share exact analysis views via URL with all filters encoded
 10. **Obsidian Integration** - Export your entire DXCC log as a structured Obsidian vault
 11. **Wikipedia Links** - Direct links to Wikipedia articles for every DXCC entity
-12. **Database Import** - Direct Log4OM and HRD database import, no ADIF export step required
+12. **Database Import** - Direct Log4OM, HRD, and DXKeeper database import, no ADIF export step required
 
 ---
 
 ## Open Source & Community
 
 - **Free and Open Source** - MIT Licensed
-- **Active Development** - Version 2.5.0 released February 2026
+- **Active Development** - Version 2.6.0 released February 2026
 - **Community Driven** - Built by amateur radio operators, for amateur radio operators
 - **Well Documented** - Comprehensive README and developer guidance
 
