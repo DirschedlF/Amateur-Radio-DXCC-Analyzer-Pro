@@ -185,6 +185,89 @@ function DXCCAnalyzer() {
   }
 
   /**
+   * Load sql.js WASM library dynamically from CDN
+   */
+  const loadSqlJs = () => {
+    return new Promise((resolve, reject) => {
+      if (window.initSqlJs) { resolve(window.initSqlJs); return }
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.min.js'
+      script.onload = () => resolve(window.initSqlJs)
+      script.onerror = () => reject(new Error('Failed to load sql.js'))
+      document.head.appendChild(script)
+    })
+  }
+
+  /**
+   * Parse a Log4OM 2 SQLite database file (.SQLite) and return QSO array
+   * compatible with parseADIF() output format.
+   * @param {ArrayBuffer} buffer - Raw file bytes
+   * @returns {Promise<Array>} Array of QSO objects
+   */
+  const parseSQLiteFile = async (buffer) => {
+    const initSqlJs = await loadSqlJs()
+    const SQL = await initSqlJs({
+      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`
+    })
+    const db = new SQL.Database(new Uint8Array(buffer))
+
+    // Confirmation type → ADIF field name mapping
+    const CT_MAP = {
+      'LOTW':   'LOTW_QSL_RCVD',
+      'EQSL':   'EQSL_QSL_RCVD',
+      'QSL':    'QSL_RCVD',
+      'QRZCOM': 'QRZCOM_QSL_RCVD',
+    }
+
+    const qsos = []
+    const result = db.exec(
+      'SELECT dxcc, country, band, cont, qsodate, mode, stationcallsign, operator, qsoconfirmations FROM Log'
+    )
+    db.close()
+
+    if (!result.length) return qsos
+
+    const { columns, values } = result[0]
+    const idx = {}
+    columns.forEach((col, i) => { idx[col] = i })
+
+    values.forEach(row => {
+      const dxcc = row[idx.dxcc]
+      if (!dxcc) return
+
+      const qso = {
+        DXCC:             String(dxcc),
+        COUNTRY:          row[idx.country] || '',
+        BAND:             (row[idx.band] || '').toLowerCase(),
+        CONT:             row[idx.cont] || '',
+        MODE:             row[idx.mode] || '',
+        STATION_CALLSIGN: row[idx.stationcallsign] || '',
+        OPERATOR:         row[idx.operator] || '',
+      }
+
+      // Convert ISO datetime "2024-10-04 07:00:00Z" → YYYYMMDD
+      const rawDate = row[idx.qsodate] || ''
+      qso.QSO_DATE = rawDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$1$2$3')
+
+      // Parse confirmation JSON
+      const confJson = row[idx.qsoconfirmations]
+      if (confJson) {
+        try {
+          const confs = JSON.parse(confJson)
+          confs.forEach(c => {
+            const field = CT_MAP[c.CT]
+            if (field) qso[field] = c.R === 'Yes' ? 'Y' : 'N'
+          })
+        } catch { /* malformed JSON — skip confirmations */ }
+      }
+
+      qsos.push(qso)
+    })
+
+    return qsos
+  }
+
+  /**
    * Check if a QSO is confirmed
    * @param {Object} qso - QSO record
    * @returns {boolean} True if confirmed
@@ -374,27 +457,36 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Handle file upload
+   * Handle file upload — supports ADIF (.adi/.adif) and Log4OM SQLite (.SQLite)
    */
   const handleFileUpload = (event) => {
     const file = event.target.files[0]
     if (!file) return
 
     setFileName(file.name)
-    const reader = new FileReader()
+    const isSQLite = /\.sqlite$/i.test(file.name)
 
-    reader.onload = (e) => {
-      const content = e.target.result
-      const qsos = parseADIF(content)
-
-      setLogData({
-        qsos,
-        totalQSOs: qsos.length
-      })
-      setCurrentPage(1)
+    if (isSQLite) {
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        try {
+          const qsos = await parseSQLiteFile(e.target.result)
+          setLogData({ qsos, totalQSOs: qsos.length })
+          setCurrentPage(1)
+        } catch (err) {
+          alert('Failed to read SQLite database: ' + err.message)
+        }
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const qsos = parseADIF(e.target.result)
+        setLogData({ qsos, totalQSOs: qsos.length })
+        setCurrentPage(1)
+      }
+      reader.readAsText(file)
     }
-
-    reader.readAsText(file)
   }
 
   // Extract available operator callsigns from QSO data
@@ -1727,7 +1819,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.4.1</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.5.0</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -1738,7 +1830,7 @@ function DXCCAnalyzer() {
                 Reload
                 <input
                   type="file"
-                  accept=".adi,.adif"
+                  accept=".adi,.adif,.sqlite,.SQLite"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -1771,13 +1863,13 @@ function DXCCAnalyzer() {
       {!logData && (
         <div className="bg-gray-800 rounded-lg p-12 text-center border-2 border-dashed border-gray-600">
           <Upload className="mx-auto mb-4 w-16 h-16 text-gray-500" />
-          <h2 className="text-2xl font-semibold mb-2">Upload Your ADIF Logbook</h2>
-          <p className="text-gray-400 mb-6">Supports .adi and .adif files - All processing happens locally in your browser</p>
+          <h2 className="text-2xl font-semibold mb-2">Upload Your Logbook</h2>
+          <p className="text-gray-400 mb-6">Supports ADIF (.adi/.adif) and Log4OM database (.SQLite) — all processing happens locally in your browser</p>
           <label className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer transition">
             <span>Choose File</span>
             <input
               type="file"
-              accept=".adi,.adif"
+              accept=".adi,.adif,.sqlite,.SQLite"
               onChange={handleFileUpload}
               className="hidden"
             />

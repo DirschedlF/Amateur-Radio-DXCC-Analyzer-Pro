@@ -14,11 +14,11 @@
 
 ## File Format Support
 
-### ✅ ADIF as Primary (and Only) Import Format
+### ✅ ADIF as Primary Import Format + Log4OM SQLite as Secondary
 
-**Decision Date:** 2024-02-04 (initial), reaffirmed 2026-02-12
+**Decision Date:** 2024-02-04 (initial), reaffirmed 2026-02-12, extended 2026-02-19 (v2.5.0)
 
-**Decision:** DXCC Analyzer Pro supports **ADIF (.adi, .adif) files only** for logbook import.
+**Decision:** DXCC Analyzer Pro supports **ADIF (.adi, .adif) files** as the primary import format, plus **Log4OM 2 SQLite databases (.SQLite)** as a secondary direct-import path.
 
 **Alternative Considered:** Cabrillo format support for contest logs
 
@@ -121,6 +121,69 @@ Supporting Cabrillo would:
 **Better approach:** Direct users to export ADIF from their logging software.
 
 **Reference:** See `.doc/CABRILLO_FORMAT_ANALYSIS.md` for detailed technical analysis.
+
+---
+
+### ✅ Log4OM SQLite as Secondary Import Format
+
+**Decision Date:** 2026-02-19 (v2.5.0)
+
+**Decision:** Add native Log4OM 2 SQLite database import as a second supported import format, alongside ADIF.
+
+**Reasoning:**
+
+#### Why Log4OM SQLite?
+
+1. **Superior Data Quality vs. ADIF Export:**
+   - Log4OM's ADIF export translates confirmation data through field mapping — introducing potential for missing or incorrectly mapped fields
+   - The SQLite database stores confirmations natively as structured JSON (`qsoconfirmations` column): `[{"CT":"LOTW","S":"Yes","R":"Yes"}, ...]`
+   - `"R": "Yes"` = Received/Confirmed; `"S": "Yes"` = Sent/Uploaded (maps cleanly to our confirmation logic)
+   - Direct database read eliminates the translation layer entirely
+
+2. **Elimination of Export Step:**
+   - Log4OM users currently must: open Log4OM → File → Export → ADIF → save → switch to browser → upload
+   - With SQLite import: drag `.SQLite` file directly into the analyzer
+   - Better user experience, no risk of forgetting to export after new QSOs
+
+3. **Technical Feasibility:**
+   - Log4OM 2 database has a clean, stable schema with only 2 tables (`Log`, `Informations`)
+   - `Log` table maps cleanly to our internal data model (all required fields present)
+   - Auto-detection by file extension (`.SQLite`) — no user decision required
+   - **sql.js** (Emscripten-compiled SQLite, WASM) runs 100% client-side; maintains privacy guarantee
+
+4. **Privacy Maintained:**
+   - sql.js executes entirely in the browser via WebAssembly
+   - No data transmission to any server
+   - File is read via `FileReader` as `ArrayBuffer` (same as ADIF, different format)
+
+#### Schema Mapping
+
+| Log4OM SQLite Column | Internal ADIF Equivalent | Notes |
+|---|---|---|
+| `dxcc` (INTEGER) | `DXCC` | Direct, no conversion |
+| `country` | `COUNTRY` | Direct |
+| `band` | `BAND` | Already in ADIF format (e.g., "20m") |
+| `cont` | `CONT` | Direct (lookup table still takes priority) |
+| `qsodate` (DATETIME) | `QSO_DATE` | Convert "2024-10-04 07:00:00Z" → "20241004" |
+| `mode` | `MODE` | Direct |
+| `stationcallsign` | `STATION_CALLSIGN` | Direct |
+| `operator` | `OPERATOR` | Direct |
+| `qsoconfirmations` (JSON) | Multiple ADIF fields | Parse `{"CT":"LOTW","R":"Yes"}` → `LOTW_QSL_RCVD=Y` |
+
+#### Why NOT Expand to Other Logging Software Databases?
+
+- **Hamlogger (SQLite)**: Different schema, less structured confirmation data
+- **HRD (MDB/SQL Server)**: Non-standard database formats requiring additional drivers
+- **N1MM+ (SQLite)**: Contest-focused schema, lacks DXCC and confirmation fields
+- **WaveLog (MariaDB)**: Server-based database, not a local file
+
+**Log4OM is the only logging program where:**
+1. The database is a portable, single-file SQLite
+2. The schema maps cleanly to our data model
+3. Confirmations are stored as machine-readable JSON (not free-text)
+4. The user base has significant overlap with DXCC chasers
+
+**Conclusion:** Log4OM SQLite import delivers a measurably better experience for a large segment of our user base, with minimal added complexity. ADIF remains the universal format for all other logging programs.
 
 ---
 
@@ -363,6 +426,7 @@ Supporting Cabrillo would:
 
 | Date | Section | Change | Reason |
 |------|---------|--------|--------|
+| 2026-02-19 | File Format Support | Added Log4OM SQLite as secondary import format (v2.5.0) | Direct database import eliminates ADIF export step |
 | 2026-02-12 | File Format Support | Added Cabrillo analysis and rejection | User inquiry about contest log support |
 | 2026-02-12 | Initial | Document created | Capture key decisions for future reference |
 

@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.4.1** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.5.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -59,6 +59,12 @@
 - **Wikipedia-Links** in der Gebiets-Tabelle — anklickbare Links zum Wikipedia-Artikel jedes DXCC-Gebiets
 - **Wikipedia-URLs im CSV- und JSON-Export** — für Verwendung in externen Werkzeugen und Workflows
 - **Manuell gepflegte Slugs** für alle Sonderfälle (Abkürzungen, Sonderzeichen, historische Namen, Begriffsklärungen)
+
+### 🗄️ **Log4OM SQLite-Import** *(NEU in v2.5.0)*
+- **Direkter Datenbank-Import** — öffnen Sie Ihre Log4OM 2 `.SQLite`-Datei ohne vorherigen ADIF-Export
+- **Native Bestätigungs-Daten** — liest Log4OM's strukturierte Bestätigungseinträge (LOTW, eQSL, QRZ.com, Paper QSL) direkt aus der Datenbank
+- **Alle Filter unterstützt** — Betriebsart, Band, Operator, Datumsbereich, Bestätigungsplattform, Kontinent funktionieren identisch zu ADIF-Importen
+- **100% Client-seitig** — betrieben durch sql.js (WebAssembly SQLite); Ihre Datenbank verlässt niemals Ihren Browser
 
 ### 📤 **Professioneller Export & Reporting**
 - **Export gefilterter Analyse nach CSV** mit vollständigem Filter-Kontext im Header und filterbewusstem Dateinamen
@@ -119,6 +125,7 @@
 9. **Teilbare Filter-Ansichten** - Exakte Analyse-Ansichten per URL mit allen kodierten Filtern teilen
 10. **Obsidian-Integration** - Gesamten DXCC-Log als strukturiertes Obsidian-Vault exportieren
 11. **Wikipedia-Links** - Direkte Links zu Wikipedia-Artikeln für jedes DXCC-Gebiet
+12. **Log4OM SQLite-Import** - Direkter Datenbank-Import, kein ADIF-Export-Schritt erforderlich (NEU in v2.5.0)
 
 ---
 
@@ -183,7 +190,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.4.1 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.5.0 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland

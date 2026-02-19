@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.4.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.5.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format and Log4OM SQLite databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -15,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **State Management**: React Hooks (useState, useMemo)
 - **Build Tool**: Vite (recommended for fast development)
 - **Language**: JavaScript (JSX)
+- **SQLite Engine**: sql.js (Emscripten/WASM) — loaded dynamically only when a `.SQLite` file is detected
 
 ## Development Commands
 
@@ -56,17 +57,55 @@ Used for the GitHub Release asset (`DXCC-Analyzer-Pro-vX.X.X-standalone.html`).
 The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1900 lines) contains:
 
 1. **ADIF Parser Module** - Regex-based extraction of ADIF tags
-2. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
-3. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-4. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data (respects column visibility)
-5. **UI Components** - Dashboard, interactive table, filters, and export functionality
-6. **Export Module** - CSV (RFC-4180 compliant), JSON, and ADIF export from filtered data
-7. **Share Module** - URL-based filter state encoding/decoding via Base64 (`buildShareUrl`, `handleShare`, URL-restore `useEffect`)
-8. **Column Config Module** - Persistent band/confirmation column visibility via `localStorage` (`hiddenColumns`, `toggleColumn`, `visibleBands`, `visibleConfirm`)
+2. **SQLite Parser Module** - Log4OM `.SQLite` database reader via sql.js WASM (auto-detected by file extension)
+3. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
+4. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
+5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data (respects column visibility)
+6. **UI Components** - Dashboard, interactive table, filters, and export functionality
+7. **Export Module** - CSV (RFC-4180 compliant), JSON, and ADIF export from filtered data
+8. **Share Module** - URL-based filter state encoding/decoding via Base64 (`buildShareUrl`, `handleShare`, URL-restore `useEffect`)
+9. **Column Config Module** - Persistent band/confirmation column visibility via `localStorage` (`hiddenColumns`, `toggleColumn`, `visibleBands`, `visibleConfirm`)
 
 ### ADIF Parsing Logic
 
 **Format Support**: `.adi` and `.adif` files
+
+### Log4OM SQLite Parsing Logic (v2.5.0+)
+
+**Format Support**: `.SQLite` files (Log4OM 2 database format)
+
+**Detection**: File extension `.SQLite` (case-insensitive) triggers the SQLite code path instead of ADIF.
+
+**Library**: `sql.js` — Emscripten-compiled SQLite3 running as WebAssembly in the browser. Loaded from CDN dynamically only when a `.SQLite` file is detected (`loadSqlJs()` helper). The WASM binary is fetched and instantiated at runtime; no npm dependency required.
+
+**Tables Used**: Only `Log` table is read (96 columns). `Informations` table is ignored.
+
+**Field Mapping**:
+| SQLite Column | Maps To | Conversion |
+|---|---|---|
+| `dxcc` (INTEGER) | `DXCC` | `.toString()` |
+| `country` | `COUNTRY` | Direct |
+| `band` | `BAND` | Already ADIF format (e.g., `"20m"`) |
+| `cont` | `CONT` | Direct (lookup table still takes priority) |
+| `qsodate` (ISO datetime) | `QSO_DATE` | `"2024-10-04 07:00:00Z"` → `"20241004"` |
+| `mode` | `MODE` | Direct |
+| `stationcallsign` | `STATION_CALLSIGN` | Direct |
+| `operator` | `OPERATOR` | Direct |
+| `qsoconfirmations` (JSON) | Multiple fields | Parse array; `{"CT":"LOTW","R":"Yes"}` → `LOTW_QSL_RCVD=Y` |
+
+**Confirmation JSON Mapping** (from `qsoconfirmations` column):
+```javascript
+// CT values → internal field names
+const CT_MAP = {
+  'LOTW':   'LOTW_QSL_RCVD',
+  'EQSL':   'EQSL_QSL_RCVD',
+  'QSL':    'QSL_RCVD',
+  'QRZCOM': 'QRZCOM_QSL_RCVD',
+};
+// "R": "Yes" → field = "Y", "R": "No" → field = "N"
+```
+
+**Output**: `parseSQLiteFile(arrayBuffer)` returns the same QSO array format as `parseADIF()`, so the analysis engine (`analyzeQSOs()`) requires zero changes.
 
 **Regex Pattern**: `<FIELDNAME:LENGTH[:TYPE]>VALUE`
 - Case-insensitive field names

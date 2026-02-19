@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.4.1**
+**Version 2.5.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.4.1-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -101,6 +101,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
   - `DXCC Dataview Queries.md` — 6 ready-to-use Dataview queries
   - Safe to re-export and overwrite; no user-editable sections in generated files
 - **Wikipedia Links** *(NEW in v2.4.1)* - Clickable Wikipedia links for every DXCC entity in the table; Wikipedia URLs also included in CSV and JSON exports
+- **Log4OM SQLite Import** *(NEW in v2.5.0)* - Direct import of Log4OM 2 database files without requiring an ADIF export; powered by sql.js (client-side WASM)
 - **Share Link** - Copy a URL with all active filters encoded (Base64); recipients restore the exact same view
 - **Print Report** - Professional print-friendly reports (A4 landscape), optionally with charts as first page; shows Last QSO date next to each country
 - **Print Charts** - Print all 4 charts on a single A4 landscape page via dedicated button
@@ -168,8 +169,8 @@ The optimized build will be in the `dist/` directory.
 ## Usage
 
 1. **Upload Your Logbook**
-   - Click "Choose File" and select your ADIF file (.adi or .adif)
-   - Supported formats: ADIF 3.x.x (standard amateur radio interchange format)
+   - Click "Choose File" and select your ADIF file (.adi or .adif) **or** your Log4OM database (.SQLite)
+   - Supported formats: ADIF 3.x.x (standard amateur radio interchange format), Log4OM SQLite database
 
 2. **View Your Statistics**
    - Dashboard shows Total QSOs, DXCC Worked, DXCC Confirmed, DXCC Missing, and Confirmation Rate
@@ -205,6 +206,17 @@ The optimized build will be in the `dist/` directory.
    - Use keyboard shortcuts: `/` to jump to search, `Esc` to clear search, `←`/`→` to navigate pages
 
 ## ADIF Field Support
+
+### Log4OM SQLite Import *(NEW in v2.5.0)*
+
+In addition to ADIF files, DXCC Analyzer Pro now supports **direct import of Log4OM 2 database files** (`.SQLite`):
+
+- **No ADIF export step needed** — open your Log4OM database directly
+- **Native confirmation data** — reads Log4OM's JSON-structured confirmation records (LOTW, eQSL, QRZ.com, Paper QSL)
+- **All filters supported** — mode, band, operator, date range, confirmation platform, continent
+- **Powered by sql.js** — fully client-side WASM SQLite engine; your database never leaves your browser
+
+Drag and drop your `Log4OM.SQLite` file or use "Choose File" — the analyzer auto-detects the file type.
 
 ### Required Fields
 - `DXCC` - DXCC Entity ID (primary grouping key)
@@ -284,6 +296,7 @@ Country names and continents are automatically resolved from the built-in DXCC l
 | Source | Status | Notes |
 |--------|--------|-------|
 | **Log4OM** Export | ✅ Works | Full support including Log4OM-specific QRZ fields |
+| **Log4OM** SQLite DB | ✅ Works | Direct database import (new in v2.5.0), no ADIF export needed |
 | **WaveLog** Export | ✅ Works | Country/continent resolved via built-in lookup table |
 | **QRZ.com** Export | ✅ Works | QRZ confirmation fields fully recognized |
 | **LOTW** Export | ✅ Works | LOTW confirmation status correctly detected |
@@ -456,6 +469,7 @@ Future enhancements under consideration:
 - [x] Band column highlighting when band filter is active
 - [x] Obsidian vault export (ZIP with entity notes, overview, not-worked list, Dataview queries)
 - [x] Wikipedia links in table, CSV, and JSON export (curated slugs for all special cases)
+- [x] Log4OM SQLite direct import (no ADIF export step required)
 
 ---
 
