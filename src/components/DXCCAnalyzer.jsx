@@ -5,6 +5,8 @@ import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEnti
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
 import initSqlJs from 'sql.js'
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
+import MDBReader from 'mdb-reader'
+import { Buffer } from 'buffer'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -366,6 +368,58 @@ function DXCCAnalyzer() {
   }
 
   /**
+   * Parse a DXKeeper Access database (.mdb/.accdb) — table "QSOs"
+   * Field mapping: DXCCID→DXCC, Band(→lowercase)→BAND, QSO_Begin(Date)→QSO_DATE,
+   *   Mode→MODE, CONT→CONT, STATION_CALLSIGN, Operator→OPERATOR,
+   *   APP_DXKeeper_LotW_QSL_RCVD→LOTW_QSL_RCVD, APP_DXKeeper_EQSL_QSL_RCVD→EQSL_QSL_RCVD,
+   *   QSL_Rcvd→QSL_RCVD, APP_DXKeeper_QRZcom_QSL_Rcvd→QRZCOM_QSL_RCVD
+   * @param {ArrayBuffer} arrayBuffer - Raw file bytes
+   * @returns {Array} Array of QSO objects compatible with parseADIF() output
+   */
+  const parseDXKeeperFile = (arrayBuffer) => {
+    const buf = Buffer.from(new Uint8Array(arrayBuffer))
+    const reader = new MDBReader(buf)
+    const tableNames = reader.getTableNames()
+
+    if (!tableNames.includes('QSOs')) {
+      throw new Error(
+        'Unsupported Access database format. Expected DXKeeper (table "QSOs"). ' +
+        'Found tables: ' + tableNames.join(', ')
+      )
+    }
+
+    const table = reader.getTable('QSOs')
+    const rows = table.getData()
+
+    return rows.map(row => {
+      // Convert JS Date → YYYYMMDD; DXKeeper uses year 4000 as null-date placeholder
+      const date = row['QSO_Begin']
+      let qsoDate = ''
+      if (date instanceof Date && date.getFullYear() < 3000) {
+        const y = date.getUTCFullYear()
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const d = String(date.getUTCDate()).padStart(2, '0')
+        qsoDate = `${y}${m}${d}`
+      }
+
+      return {
+        DXCC:            row['DXCCID']?.toString()                  || '',
+        COUNTRY:         '',  // resolved from DXCC ID via lookupDXCC() in analyzeQSOs()
+        BAND:            row['Band']?.toLowerCase()                  || '',  // "17M" → "17m"
+        CONT:            row['CONT']                                  || '',
+        QSO_DATE:        qsoDate,
+        MODE:            row['Mode']                                  || '',
+        STATION_CALLSIGN: row['STATION_CALLSIGN']                    || '',
+        OPERATOR:        row['Operator']                              || '',
+        LOTW_QSL_RCVD:   row['APP_DXKeeper_LotW_QSL_RCVD']         || '',
+        EQSL_QSL_RCVD:   row['APP_DXKeeper_EQSL_QSL_RCVD']         || '',
+        QSL_RCVD:        row['QSL_Rcvd']                             || '',
+        QRZCOM_QSL_RCVD: row['APP_DXKeeper_QRZcom_QSL_Rcvd']       || '',
+      }
+    })
+  }
+
+  /**
    * Check if a QSO is confirmed
    * @param {Object} qso - QSO record
    * @returns {boolean} True if confirmed
@@ -555,7 +609,7 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Handle file upload — supports ADIF (.adi/.adif), Log4OM (.SQLite), and HRD (.hrdsql)
+   * Handle file upload — supports ADIF (.adi/.adif), Log4OM (.SQLite), HRD (.hrdsql), and DXKeeper (.mdb/.accdb)
    */
   const handleFileUpload = (event) => {
     const file = event.target.files[0]
@@ -563,13 +617,26 @@ function DXCCAnalyzer() {
 
     setFileName(file.name)
     const isSQLite = /\.(sqlite|hrdsql)$/i.test(file.name)
+    const isMDB = /\.(mdb|accdb)$/i.test(file.name)
 
     if (isSQLite && __SINGLEFILE__) {
-      alert('Database import is not available in the standalone version. Please use the hosted version or export your log as ADIF.')
+      alert('SQLite database import is not available in the standalone version. Please use the hosted version or export your log as ADIF.')
       return
     }
 
-    if (isSQLite) {
+    if (isMDB) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const qsos = parseDXKeeperFile(e.target.result)
+          setLogData({ qsos, totalQSOs: qsos.length })
+          setCurrentPage(1)
+        } catch (err) {
+          alert('Failed to read Access database: ' + err.message)
+        }
+      }
+      reader.readAsArrayBuffer(file)
+    } else if (isSQLite) {
       const reader = new FileReader()
       reader.onload = async (e) => {
         try {
@@ -1933,7 +2000,7 @@ function DXCCAnalyzer() {
                 Reload
                 <input
                   type="file"
-                  accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite,.hrdsql"}
+                  accept={__SINGLEFILE__ ? ".adi,.adif,.mdb,.accdb" : ".adi,.adif,.sqlite,.SQLite,.hrdsql,.mdb,.accdb"}
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -1967,12 +2034,12 @@ function DXCCAnalyzer() {
         <div className="bg-gray-800 rounded-lg p-12 text-center border-2 border-dashed border-gray-600">
           <Upload className="mx-auto mb-4 w-16 h-16 text-gray-500" />
           <h2 className="text-2xl font-semibold mb-2">Upload Your Logbook</h2>
-          <p className="text-gray-400 mb-6">{__SINGLEFILE__ ? 'Supports ADIF files (.adi/.adif)' : 'Supports ADIF (.adi/.adif), Log4OM (.SQLite), and HRD (.hrdsql)'} — all processing happens locally in your browser</p>
+          <p className="text-gray-400 mb-6">{__SINGLEFILE__ ? 'Supports ADIF (.adi/.adif) and DXKeeper (.mdb/.accdb)' : 'Supports ADIF (.adi/.adif), Log4OM (.SQLite), HRD (.hrdsql), and DXKeeper (.mdb/.accdb)'} — all processing happens locally in your browser</p>
           <label className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer transition">
             <span>Choose File</span>
             <input
               type="file"
-              accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite,.hrdsql"}
+              accept={__SINGLEFILE__ ? ".adi,.adif,.mdb,.accdb" : ".adi,.adif,.sqlite,.SQLite,.hrdsql,.mdb,.accdb"}
               onChange={handleFileUpload}
               className="hidden"
             />
