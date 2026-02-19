@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, BarChart3, RefreshCw, Calendar, Share2, Eye, EyeOff, FileJson, Radio, Clock, BookOpen } from 'lucide-react'
-import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Cell, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
 import initSqlJs from 'sql.js'
@@ -542,7 +542,10 @@ function DXCCAnalyzer() {
           lastQsoCall: null,
           lastQsoBand: null,
           bandLastQso: {},
-          bandLastQsoCall: {}
+          bandLastQsoCall: {},
+          firstQso: null,           // Earliest QSO date (YYYYMMDD) — for progress chart
+          firstConfirmedDate: null, // Earliest confirmed QSO date (YYYYMMDD) — for progress chart
+          bandFirstQso: {}          // Earliest QSO date per band (YYYYMMDD) — for band-filtered progress chart
         }
 
         BANDS.forEach(b => {
@@ -552,6 +555,7 @@ function DXCCAnalyzer() {
           dxccData[dxccId].bandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
           dxccData[dxccId].bandLastQso[b] = null
           dxccData[dxccId].bandLastQsoCall[b] = null
+          dxccData[dxccId].bandFirstQso[b] = null
         })
       }
 
@@ -565,6 +569,10 @@ function DXCCAnalyzer() {
           dxccData[dxccId].lastQso = qsoDate
           dxccData[dxccId].lastQsoCall = qsoCall
           dxccData[dxccId].lastQsoBand = band ? band.toLowerCase() : null
+        }
+        // Track first QSO date (for progress chart)
+        if (!dxccData[dxccId].firstQso || qsoDate < dxccData[dxccId].firstQso) {
+          dxccData[dxccId].firstQso = qsoDate
         }
       }
 
@@ -583,17 +591,27 @@ function DXCCAnalyzer() {
       if (isQsl) { dxccData[dxccId].qsl = true; dxccData[dxccId].platformQsos.qsl++ }
       if (isQrz) { dxccData[dxccId].qrz = true; dxccData[dxccId].platformQsos.qrz++ }
 
+      // Track first confirmed QSO date (for progress chart)
+      if (confirmed && qsoDate) {
+        if (!dxccData[dxccId].firstConfirmedDate || qsoDate < dxccData[dxccId].firstConfirmedDate) {
+          dxccData[dxccId].firstConfirmedDate = qsoDate
+        }
+      }
+
       // Update band status, count, and per-band confirmations
       if (band && BANDS.includes(band.toLowerCase())) {
         const normalizedBand = band.toLowerCase()
         const currentStatus = dxccData[dxccId].bands[normalizedBand]
         dxccData[dxccId].bandQsos[normalizedBand]++
 
-        // Track last QSO date and callsign per band
+        // Track last and first QSO date per band
         if (qsoDate) {
           if (!dxccData[dxccId].bandLastQso[normalizedBand] || qsoDate > dxccData[dxccId].bandLastQso[normalizedBand]) {
             dxccData[dxccId].bandLastQso[normalizedBand] = qsoDate
             dxccData[dxccId].bandLastQsoCall[normalizedBand] = qsoCall
+          }
+          if (!dxccData[dxccId].bandFirstQso[normalizedBand] || qsoDate < dxccData[dxccId].bandFirstQso[normalizedBand]) {
+            dxccData[dxccId].bandFirstQso[normalizedBand] = qsoDate
           }
         }
 
@@ -1177,6 +1195,105 @@ function DXCCAnalyzer() {
 
     return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
   }, [filteredData, analyzedData, missingDXCC, searchTerm, filterStatus, filterContinent, filterBand, hiddenColumns])
+
+  // Cumulative DXCC progress over time (worked entities only)
+  // Computed directly from raw logData.qsos — intentionally ignores the date range filter
+  // so the chart always shows the full history regardless of the table's date filter.
+  // Respects: mode, operator, band, continent filters.
+  const progressData = useMemo(() => {
+    if (!logData?.qsos?.length) return null
+
+    // Apply mode + operator filters (same logic as analyzeQSOs) but NO date filter
+    let qsos = filterMode === 'all' ? logData.qsos : logData.qsos.filter(q => categorizeMode(q.MODE) === filterMode)
+    if (filterOperator !== 'all') {
+      qsos = qsos.filter(q => (q.STATION_CALLSIGN || q.OPERATOR || '').toUpperCase() === filterOperator)
+    }
+
+    // Build per-entity earliest QSO date (global + per band) and continent in one pass
+    const entityFirstQso = {}      // dxccId -> YYYYMMDD
+    const entityBandFirstQso = {}  // dxccId -> { band -> YYYYMMDD }
+    const entityCont = {}          // dxccId -> continent string
+
+    qsos.forEach(q => {
+      const dxccId = q.DXCC
+      const qsoDate = q.QSO_DATE
+      if (!dxccId || !qsoDate) return
+
+      if (!entityCont[dxccId]) {
+        entityCont[dxccId] = lookupDXCC(dxccId)?.cont || q.CONT || ''
+      }
+      if (!entityFirstQso[dxccId] || qsoDate < entityFirstQso[dxccId]) {
+        entityFirstQso[dxccId] = qsoDate
+      }
+      const band = q.BAND?.toLowerCase()
+      if (band && BANDS.includes(band)) {
+        if (!entityBandFirstQso[dxccId]) entityBandFirstQso[dxccId] = {}
+        if (!entityBandFirstQso[dxccId][band] || qsoDate < entityBandFirstQso[dxccId][band]) {
+          entityBandFirstQso[dxccId][band] = qsoDate
+        }
+      }
+    })
+
+    // Collect first-worked dates, respecting band + continent filters
+    const dates = Object.keys(entityFirstQso)
+      .filter(id => filterContinent === 'all' || entityCont[id] === filterContinent)
+      .map(id => filterBand !== 'all' ? entityBandFirstQso[id]?.[filterBand] : entityFirstQso[id])
+      .filter(Boolean)
+
+    if (!dates.length) return null
+
+    // Bucket by month (YYYYMM)
+    const workedByMonth = {}
+    dates.forEach(d => {
+      const m = d.slice(0, 6)
+      workedByMonth[m] = (workedByMonth[m] || 0) + 1
+    })
+
+    const allMonths = Object.keys(workedByMonth).sort()
+
+    const firstMonth = allMonths[0]
+    const lastMonth = allMonths[allMonths.length - 1]
+    const firstYear = parseInt(firstMonth.slice(0, 4))
+    const lastYear = parseInt(lastMonth.slice(0, 4))
+
+    // Switch to yearly aggregation when log spans more than 3 years
+    if (lastYear - firstYear + 1 > 3) {
+      const workedByYear = {}
+      Object.entries(workedByMonth).forEach(([m, n]) => {
+        const y = m.slice(0, 4)
+        workedByYear[y] = (workedByYear[y] || 0) + n
+      })
+      // Fill ALL years from firstYear to lastYear (no gaps)
+      let cumWorked = 0
+      const result = [{ period: String(firstYear - 1), worked: 0, label: String(firstYear - 1) }]
+      for (let y = firstYear; y <= lastYear; y++) {
+        cumWorked += workedByYear[String(y)] || 0
+        result.push({ period: String(y), worked: cumWorked, label: String(y) })
+      }
+      return result
+    } else {
+      // Monthly: fill ALL months from firstMonth to lastMonth (no gaps)
+      const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+      const moLabel = (yr, mo) => `${MO[mo - 1]} '${String(yr).slice(2)}`
+      const firstMo = parseInt(firstMonth.slice(4, 6))
+      const prevMo = firstMo === 1 ? 12 : firstMo - 1
+      const prevYear = firstMo === 1 ? firstYear - 1 : firstYear
+      const zeroPoint = { period: `${prevYear}-${String(prevMo).padStart(2, '0')}`, worked: 0, label: moLabel(prevYear, prevMo) }
+      const result = [zeroPoint]
+      let cumWorked = 0
+      let y = firstYear
+      let m = firstMo
+      const endY = parseInt(lastMonth.slice(0, 4))
+      const endM = parseInt(lastMonth.slice(4, 6))
+      while (y < endY || (y === endY && m <= endM)) {
+        const key = `${y}${String(m).padStart(2, '0')}`
+        cumWorked += workedByMonth[key] || 0
+        result.push({ period: `${y}-${String(m).padStart(2, '0')}`, worked: cumWorked, label: moLabel(y, m) })
+        if (++m > 12) { m = 1; y++ }
+      }
+      return result
+    }
+  }, [logData, filterMode, filterOperator, filterBand, filterContinent])
 
   // Reset all filters
   const resetAllFilters = () => {
@@ -1944,6 +2061,7 @@ function DXCCAnalyzer() {
     const frameId = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         // Give Recharts enough time to fully recalculate and render SVG bars at new height
+        // 1200ms: covers 5 charts resizing simultaneously + default 400ms Recharts animation
         const timerId = setTimeout(() => {
           const cleanup = () => {
             setPrintMode('none')
@@ -1961,7 +2079,7 @@ function DXCCAnalyzer() {
               cleanup()
             }
           }, 1000)
-        }, 500)
+        }, 1200)
 
         return () => clearTimeout(timerId)
       })
@@ -2260,6 +2378,70 @@ function DXCCAnalyzer() {
                   <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-700"></span> None</span>
                 </div>
               </div>
+
+            </div>
+          )}
+
+          {/* DXCC Progress Over Time — separate block outside the 2-column grid
+              (avoids Chrome bug: grid-column spanning fails for items after page-break-before) */}
+          {showCharts && progressData && (
+            <div className={`progress-chart-card bg-gray-800 rounded-lg p-4 mb-6 ${printMode === 'none' ? 'print:hidden' : ''}`}>
+              <h3 className="text-lg font-semibold mb-1 text-center">DXCC Progress Over Time</h3>
+              <p className="text-xs text-gray-400 text-center mb-3">
+                {[
+                  'Cumulative new DXCC entities worked',
+                  filterContinent !== 'all' && `in ${filterContinent}`,
+                  filterBand !== 'all' && `on ${filterBand}`
+                ].filter(Boolean).join(' ')}
+              </p>
+              <ResponsiveContainer width={printMode !== 'none' ? 1040 : '100%'} height={printMode === 'report' ? 195 : 300}>
+                    <AreaChart data={progressData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="progressWorked" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#eab308" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#eab308" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="period"
+                        tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }}
+                        interval={Math.max(0, Math.ceil(progressData.length / 12) - 1)}
+                        tickFormatter={(period) => progressData.find(d => d.period === period)?.label ?? period}
+                      />
+                      <YAxis
+                        tick={{ fill: '#9ca3af', fontSize: printMode !== 'none' ? 9 : 12 }}
+                        allowDecimals={false}
+                        domain={[0, 'auto']}
+                        width={printMode !== 'none' ? 30 : 45}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
+                        labelStyle={{ color: '#f3f4f6', fontWeight: 'bold', marginBottom: '4px' }}
+                        itemStyle={{ color: '#d1d5db' }}
+                        cursor={{ stroke: 'rgba(255,255,255,0.15)', strokeWidth: 1 }}
+                        labelFormatter={(period) => {
+                          if (typeof period === 'string' && period.includes('-')) {
+                            const [yr, mo] = period.split('-')
+                            const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+                            return `${months[parseInt(mo) - 1]} ${yr}`
+                          }
+                          return String(period)
+                        }}
+                        formatter={(value) => [value, 'Worked']}
+                      />
+                      <Area
+                        type="linear"
+                        dataKey="worked"
+                        name="Worked"
+                        stroke="#eab308"
+                        strokeWidth={2}
+                        fill="url(#progressWorked)"
+                        dot={false}
+                        activeDot={{ r: 5, fill: '#eab308' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
             </div>
           )}
 

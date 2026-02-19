@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.6.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.7.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
 - **Framework**: React 18+
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide-React
-- **Charts**: Recharts (BarChart, Heatmap)
+- **Charts**: Recharts (BarChart, AreaChart, Heatmap)
 - **State Management**: React Hooks (useState, useMemo)
 - **Build Tool**: Vite (recommended for fast development)
 - **Language**: JavaScript (JSX)
@@ -63,7 +63,7 @@ The application is architected as a **Single-File-Component** for maximum portab
 2. **SQLite Parser Module** - Log4OM (`.SQLite`) and HRD (`.hrdsql`) database reader via sql.js WASM (auto-detected by table names)
 3. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
 4. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data (respects column visibility)
+5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, band x continent heatmap data (respects column visibility), and cumulative DXCC progress over time (`progressData` useMemo)
 6. **UI Components** - Dashboard, interactive table, filters, and export functionality
 7. **Export Module** - CSV (RFC-4180 compliant), JSON, and ADIF export from filtered data
 8. **Share Module** - URL-based filter state encoding/decoding via Base64 (`buildShareUrl`, `handleShare`, URL-restore `useEffect`)
@@ -290,7 +290,15 @@ Three levels of statistics:
     "bandQsos": { "160m": 0, ... },
     "bandConfirmations": { "160m": { lotw: false, eqsl: false, qrz: false, qsl: false }, ... },
     "platformQsos": { "lotw": 0, "eqsl": 0, "qrz": 0, "qsl": 0 },
-    "bandPlatformQsos": { "160m": { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }, ... }
+    "bandPlatformQsos": { "160m": { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }, ... },
+    "lastQso": "YYYYMMDD",           // Most recent QSO date (global)
+    "lastQsoCall": "string",         // Callsign of most recent QSO
+    "lastQsoBand": "string",         // Band of most recent QSO
+    "bandLastQso": { "20m": "YYYYMMDD", ... },     // Most recent QSO date per band
+    "bandLastQsoCall": { "20m": "string", ... },   // Callsign of most recent QSO per band
+    "firstQso": "YYYYMMDD",          // Earliest QSO date (global) — for progress chart
+    "firstConfirmedDate": "YYYYMMDD",// Earliest confirmed QSO date — reserved for future use
+    "bandFirstQso": { "20m": "YYYYMMDD", ... }     // Earliest QSO date per band — for band-filtered progress chart
   }
 }
 ```
@@ -343,7 +351,17 @@ Three levels of statistics:
 - **Band Activity**: Stacked bar chart per band
 - **Confirmation Platforms**: Horizontal bar chart (LOTW, eQSL, QRZ, Paper)
 - **Band x Continent Heatmap**: Color-intensity grid
-- All charts react dynamically to active filters
+- **DXCC Progress Over Time**: Cumulative AreaChart — new DXCC entities worked over time (v2.7.0)
+  - Full-width chart rendered **outside** the 2-column `.chart-section` grid (avoids Chrome `grid-column: span` + `page-break-before` rendering bug)
+  - `type="linear"` (no dots, `dot={false}`) with amber fill gradient
+  - Auto-granularity: monthly when log spans ≤ 3 years, yearly when span > 3 years
+  - Zero-point prepended one period before first QSO so curve always starts at 0
+  - **Filter behaviour**: Respects Mode, Operator, Band, Continent filters
+  - **Intentionally ignores the Date Range filter** — always shows full log history so the award journey remains visible regardless of the table's date zoom
+  - Data source: `progressData` useMemo computed directly from `logData.qsos` (not `analyzedData`) to bypass the date pre-filter
+  - `analyzeQSOs()` additionally tracks `firstQso` and `firstConfirmedDate` per entity for this chart
+  - **Print fix**: `ResponsiveContainer` gets explicit `width={1040}` in print mode (instead of `"100%"`) to bypass ResizeObserver timing — Recharts SVGs have no `viewBox`, so CSS `max-width` alone cannot reliably constrain SVG dimensions before `window.print()` fires
+- All charts (except Progress) react dynamically to active filters
 - Charts hidden for "Not Worked" view; only show worked entries for "All Entities"
 
 ### Container Layout

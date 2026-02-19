@@ -46,6 +46,9 @@ body {
 [data-print-mode] .chart-section > div {
   overflow: hidden;
 }
+[data-print-mode] .progress-chart-card {
+  max-width: 1081px !important;
+}
 
 /* Print Styles */
 @media print {
@@ -204,20 +207,15 @@ body {
     print-color-adjust: exact !important;
   }
 
-  /* Charts-only mode: no page break, footer stays on same page */
-  [data-print-mode="charts"] .chart-section {
-    page-break-after: auto;
-    page-break-inside: avoid;
-  }
-
-  /* Keep everything together on one page for charts-only mode */
-  [data-print-mode="charts"] .container {
-    page-break-inside: avoid;
-  }
-
-  /* Report mode: page break after charts before table */
+  /* Report mode: page break after charts section (before table) */
   [data-print-mode="report"] .chart-section {
     page-break-after: always;
+  }
+
+  /* Progress chart always starts on a new page (both charts-only and report mode).
+     It lives outside the 2-column grid, so no grid-column needed. */
+  [data-print-mode] .progress-chart-card {
+    page-break-before: always;
   }
 
   /* Chart card styling for print */
@@ -225,7 +223,6 @@ body {
     border: 1px solid #d1d5db !important;
     border-radius: 4px !important;
     padding: 4px 6px !important;
-    page-break-inside: avoid;
     overflow: visible !important;
   }
 
