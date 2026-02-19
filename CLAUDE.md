@@ -51,6 +51,8 @@ BUILD_MODE=singlefile npm run build
 Output: `dist-standalone/index.html` — all JS and CSS inlined, no server required.
 Used for the GitHub Release asset (`DXCC-Analyzer-Pro-vX.X.X-standalone.html`).
 
+**Note:** The standalone build supports **ADIF import only**. SQLite/Log4OM import is disabled because the sql.js WASM binary (~1.1 MB) cannot be inlined into a single HTML file. The `__SINGLEFILE__` build flag (injected via Vite `define`) controls this: file picker hides `.sqlite`, upload handler shows a hint directing users to the hosted version or ADIF export.
+
 ## Core Architecture
 
 ### Single-File Component Design

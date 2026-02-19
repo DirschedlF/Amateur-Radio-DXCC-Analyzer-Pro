@@ -165,6 +165,13 @@ Supporting Cabrillo would:
    - Column index built from SELECT order rather than `result[0].columns` (npm sql.js builds may omit this property)
    - Missing optional columns are silently skipped; only `dxcc` is required
 
+6. **Standalone Build Limitation:**
+   - The standalone single-file HTML (`BUILD_MODE=singlefile`) supports **ADIF import only**
+   - Reason: sql.js WASM binary (~1.1 MB) cannot be inlined into a single HTML file by `vite-plugin-singlefile`
+   - The `__SINGLEFILE__` compile-time flag (Vite `define`) disables SQLite UI and import at build time
+   - File picker shows only `.adi/.adif`, upload handler rejects `.sqlite` with a user-friendly hint
+   - Decision: acceptable trade-off — Log4OM users can export to ADIF, or use the hosted version for direct SQLite import
+
 #### Schema Mapping
 
 | Log4OM SQLite Column | Internal ADIF Equivalent | Notes |

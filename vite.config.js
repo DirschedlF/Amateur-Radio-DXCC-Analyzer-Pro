@@ -7,6 +7,7 @@ const isSingleFile = process.env.BUILD_MODE === 'singlefile'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: isSingleFile ? [react(), viteSingleFile()] : [react()],
+  define: { __SINGLEFILE__: JSON.stringify(isSingleFile) },
   base: isSingleFile ? './' : '/Amateur-Radio-DXCC-Analyzer-Pro/',
   build: {
     outDir: isSingleFile ? 'dist-standalone' : 'dist',

@@ -480,6 +480,11 @@ function DXCCAnalyzer() {
     setFileName(file.name)
     const isSQLite = /\.sqlite$/i.test(file.name)
 
+    if (isSQLite && __SINGLEFILE__) {
+      alert('SQLite import is not available in the standalone version. Please use the hosted version or export your log as ADIF from Log4OM.')
+      return
+    }
+
     if (isSQLite) {
       const reader = new FileReader()
       reader.onload = async (e) => {
@@ -1844,7 +1849,7 @@ function DXCCAnalyzer() {
                 Reload
                 <input
                   type="file"
-                  accept=".adi,.adif,.sqlite,.SQLite"
+                  accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite"}
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -1878,12 +1883,12 @@ function DXCCAnalyzer() {
         <div className="bg-gray-800 rounded-lg p-12 text-center border-2 border-dashed border-gray-600">
           <Upload className="mx-auto mb-4 w-16 h-16 text-gray-500" />
           <h2 className="text-2xl font-semibold mb-2">Upload Your Logbook</h2>
-          <p className="text-gray-400 mb-6">Supports ADIF (.adi/.adif) and Log4OM database (.SQLite) — all processing happens locally in your browser</p>
+          <p className="text-gray-400 mb-6">{__SINGLEFILE__ ? 'Supports ADIF files (.adi/.adif)' : 'Supports ADIF (.adi/.adif) and Log4OM database (.SQLite)'} — all processing happens locally in your browser</p>
           <label className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer transition">
             <span>Choose File</span>
             <input
               type="file"
-              accept=".adi,.adif,.sqlite,.SQLite"
+              accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite"}
               onChange={handleFileUpload}
               className="hidden"
             />
