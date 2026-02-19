@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.5.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format and Log4OM SQLite databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.5.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, and Ham Radio Deluxe (HRD) databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -59,7 +59,7 @@ Used for the GitHub Release asset (`DXCC-Analyzer-Pro-vX.X.X-standalone.html`).
 The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1900 lines) contains:
 
 1. **ADIF Parser Module** - Regex-based extraction of ADIF tags
-2. **SQLite Parser Module** - Log4OM `.SQLite` database reader via sql.js WASM (auto-detected by file extension)
+2. **SQLite Parser Module** - Log4OM (`.SQLite`) and HRD (`.hrdsql`) database reader via sql.js WASM (auto-detected by table names)
 3. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
 4. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
 5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, and band x continent heatmap data (respects column visibility)
@@ -72,17 +72,24 @@ The application is architected as a **Single-File-Component** for maximum portab
 
 **Format Support**: `.adi` and `.adif` files
 
-### Log4OM SQLite Parsing Logic (v2.5.0+)
+### SQLite Database Parsing (v2.5.0+)
 
-**Format Support**: `.SQLite` files (Log4OM 2 database format)
+**Supported Formats**: Log4OM 2 (`.SQLite`) and Ham Radio Deluxe (`.hrdsql`)
 
-**Detection**: File extension `.SQLite` (case-insensitive) triggers the SQLite code path instead of ADIF.
+**Auto-Detection**: File extensions `.sqlite` or `.hrdsql` (case-insensitive) trigger the SQLite code path. The database type is then auto-detected by table names:
+
+- Table `Log` → Log4OM parser
+- Table `TABLE_HRD_CONTACTS_V07` → HRD parser
 
 **Library**: `sql.js` — Emscripten-compiled SQLite3 running as WebAssembly in the browser. Bundled locally as npm dependency; WASM binary served via Vite `?url` import. No CDN or network access required — consistent with the project's zero-network privacy guarantee.
 
-**Safety**: Database is opened read-only (`PRAGMA query_only = ON`) and integrity-checked (`PRAGMA integrity_check`) before reading. The original file is never modified.
+**Safety**: Database is opened read-only (`PRAGMA query_only = ON`) and integrity-checked (`PRAGMA integrity_check`) before reading. The original file is never modified. Database is always closed in a `finally` block.
 
-**Schema Discovery**: Column names are discovered dynamically via `PRAGMA table_info('Log')` with case-insensitive matching. This ensures compatibility across Log4OM versions even if column casing changes. Column index is built from the SELECT order (npm sql.js builds may omit `result[0].columns`).
+**Schema Discovery**: Column names are discovered dynamically via `PRAGMA table_info()` with case-insensitive matching. This ensures compatibility across software versions even if column casing changes. Column index is built from the SELECT order (npm sql.js builds may omit `result[0].columns`).
+
+**Architecture**: Shared helpers `openSQLiteDB()` and `discoverColumns()` handle database setup and schema discovery. Format-specific parsers `parseLog4OM()` and `parseHRD()` handle the data extraction. Both return the same QSO array format as `parseADIF()`.
+
+#### Log4OM Parser
 
 **Tables Used**: Only `Log` table is read (97 columns). `Informations` table is ignored.
 
@@ -110,6 +117,29 @@ const CT_MAP = {
 };
 // "R": "Yes" → field = "Y", "R": "No" → field = "N"
 ```
+
+#### HRD Parser (v2.5.1+)
+
+**Tables Used**: `TABLE_HRD_CONTACTS_V07` (207 columns). Column naming follows `COL_<ADIF_FIELD_NAME>` pattern.
+
+**Field Mapping**:
+
+| HRD Column | Maps To | Conversion |
+| --- | --- | --- |
+| `COL_DXCC` (TEXT) | `DXCC` | Direct (already string) |
+| `COL_COUNTRY` | `COUNTRY` | Direct |
+| `COL_BAND` | `BAND` | Already ADIF format (e.g., `"40m"`) |
+| `COL_CONT` | `CONT` | Direct (lookup table still takes priority) |
+| `COL_QSO_DATE` (DATE) | `QSO_DATE` | `"2024-10-08"` → `"20241008"` (remove hyphens) |
+| `COL_MODE` | `MODE` | Direct |
+| `COL_STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
+| `COL_OPERATOR` | `OPERATOR` | Direct |
+| `COL_LOTW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`V`/`N`) |
+| `COL_EQSL_QSL_RCVD` | `EQSL_QSL_RCVD` | Direct |
+| `COL_QSL_RCVD` | `QSL_RCVD` | Direct |
+| `COL_QRZCOM_QSO_DOWNLOAD_STATUS` | `QRZCOM_QSO_DOWNLOAD_STATUS` | Direct (this is QRZ confirmation, not upload) |
+
+**Key difference from Log4OM**: HRD stores confirmations as individual columns (standard ADIF field names with `COL_` prefix) — no JSON parsing needed.
 
 **Output**: `parseSQLiteFile(arrayBuffer)` returns the same QSO array format as `parseADIF()`, so the analysis engine (`analyzeQSOs()`) requires zero changes.
 

@@ -169,13 +169,13 @@ Supporting Cabrillo would:
    - The standalone single-file HTML (`BUILD_MODE=singlefile`) supports **ADIF import only**
    - Reason: sql.js WASM binary (~1.1 MB) cannot be inlined into a single HTML file by `vite-plugin-singlefile`
    - The `__SINGLEFILE__` compile-time flag (Vite `define`) disables SQLite UI and import at build time
-   - File picker shows only `.adi/.adif`, upload handler rejects `.sqlite` with a user-friendly hint
-   - Decision: acceptable trade-off — Log4OM users can export to ADIF, or use the hosted version for direct SQLite import
+   - File picker shows only `.adi/.adif`, upload handler rejects `.sqlite`/`.hrdsql` with a user-friendly hint
+   - Decision: acceptable trade-off — users can export to ADIF, or use the hosted version for direct database import
 
-#### Schema Mapping
+#### Log4OM Schema Mapping
 
 | Log4OM SQLite Column | Internal ADIF Equivalent | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `dxcc` (INTEGER) | `DXCC` | Direct, no conversion |
 | `country` | `COUNTRY` | Direct |
 | `band` | `BAND` | Already in ADIF format (e.g., "20m") |
@@ -186,20 +186,43 @@ Supporting Cabrillo would:
 | `operator` | `OPERATOR` | Direct |
 | `qsoconfirmations` (JSON) | Multiple ADIF fields | Parse `{"CT":"LOTW","R":"Yes"}` → `LOTW_QSL_RCVD=Y` |
 
+#### HRD Support (v2.5.1+)
+
+**Why add HRD?** Ham Radio Deluxe stores its logbook as a portable SQLite file (`.hrdsql`) with a clean schema. All columns follow the `COL_<ADIF_FIELD_NAME>` pattern, making integration straightforward — essentially strip the `COL_` prefix and you have ADIF fields. Confirmations are stored as individual columns (no JSON parsing needed), matching our existing confirmation logic directly.
+
+**HRD Schema Mapping:**
+
+| HRD Column | Internal ADIF Equivalent | Notes |
+| --- | --- | --- |
+| `COL_DXCC` (TEXT) | `DXCC` | Already string |
+| `COL_COUNTRY` | `COUNTRY` | Direct |
+| `COL_BAND` | `BAND` | Already ADIF format |
+| `COL_CONT` | `CONT` | Direct (lookup table takes priority) |
+| `COL_QSO_DATE` (DATE) | `QSO_DATE` | `"2024-10-08"` → `"20241008"` (remove hyphens) |
+| `COL_MODE` | `MODE` | Direct |
+| `COL_STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
+| `COL_OPERATOR` | `OPERATOR` | Direct |
+| `COL_LOTW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`V`/`N`) |
+| `COL_EQSL_QSL_RCVD` | `EQSL_QSL_RCVD` | Direct |
+| `COL_QSL_RCVD` | `QSL_RCVD` | Direct |
+| `COL_QRZCOM_QSO_DOWNLOAD_STATUS` | `QRZCOM_QSO_DOWNLOAD_STATUS` | QRZ confirmation (not upload) |
+
+**Auto-Detection**: The parser detects HRD vs Log4OM by table names (`TABLE_HRD_CONTACTS_V07` vs `Log`), so both formats use the same `.parseSQLiteFile()` entry point.
+
 #### Why NOT Expand to Other Logging Software Databases?
 
 - **Hamlogger (SQLite)**: Different schema, less structured confirmation data
-- **HRD (MDB/SQL Server)**: Non-standard database formats requiring additional drivers
 - **N1MM+ (SQLite)**: Contest-focused schema, lacks DXCC and confirmation fields
 - **WaveLog (MariaDB)**: Server-based database, not a local file
 
-**Log4OM is the only logging program where:**
+**Log4OM and HRD are the only logging programs where:**
+
 1. The database is a portable, single-file SQLite
 2. The schema maps cleanly to our data model
-3. Confirmations are stored as machine-readable JSON (not free-text)
+3. Confirmations are stored in machine-readable format
 4. The user base has significant overlap with DXCC chasers
 
-**Conclusion:** Log4OM SQLite import delivers a measurably better experience for a large segment of our user base, with minimal added complexity. ADIF remains the universal format for all other logging programs.
+**Conclusion:** Log4OM and HRD SQLite import delivers a measurably better experience for a large segment of our user base, with minimal added complexity. ADIF remains the universal format for all other logging programs.
 
 ---
 

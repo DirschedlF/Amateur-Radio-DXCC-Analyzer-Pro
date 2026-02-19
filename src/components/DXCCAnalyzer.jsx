@@ -192,7 +192,12 @@ function DXCCAnalyzer() {
    * @param {ArrayBuffer} buffer - Raw file bytes
    * @returns {Promise<Array>} Array of QSO objects
    */
-  const parseSQLiteFile = async (buffer) => {
+  /**
+   * Open a SQLite database read-only with integrity check.
+   * @param {ArrayBuffer} buffer - Raw file bytes
+   * @returns {Promise<{db: object, tableNames: string[]}>}
+   */
+  const openSQLiteDB = async (buffer) => {
     const SQL = await initSqlJs({
       locateFile: () => sqlWasmUrl
     })
@@ -206,27 +211,33 @@ function DXCCAnalyzer() {
       throw new Error('SQLite integrity check failed — the database may have been modified during read. Please try again or use a copy of the file.')
     }
 
-    // Discover actual column names (case-insensitive matching)
     const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table'")
-    const schemaResult = db.exec("PRAGMA table_info('Log')")
-    if (!schemaResult.length) {
-      db.close()
-      throw new Error('Table "Log" not found in database. Available tables: ' + (tables.length ? tables[0].values.map(r => r[0]).join(', ') : 'none'))
-    }
-    const dbColumns = schemaResult[0].values.map(row => row[1]) // column 1 = name
+    const tableNames = tables.length ? tables[0].values.map(r => r[0]) : []
+    return { db, tableNames }
+  }
+
+  /**
+   * Discover columns in a table with case-insensitive matching.
+   * @returns {{ selectCols: string[], idx: object, dbColumns: string[] }}
+   */
+  const discoverColumns = (db, tableName, neededCols) => {
+    const schemaResult = db.exec(`PRAGMA table_info('${tableName}')`)
+    if (!schemaResult.length) return null
+    const dbColumns = schemaResult[0].values.map(row => row[1])
     const colMap = {}
     dbColumns.forEach(col => { colMap[col.toLowerCase()] = col })
-
     const findCol = (name) => colMap[name.toLowerCase()] || null
-    const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations']
     const selectCols = neededCols.map(c => findCol(c)).filter(Boolean)
+    const idx = {}
+    selectCols.forEach((col, i) => { idx[col.toLowerCase()] = i })
+    return { selectCols, idx, dbColumns, findCol }
+  }
 
-    if (!findCol('dxcc')) {
-      db.close()
-      throw new Error('Required column "dxcc" not found in Log table. Available columns: ' + dbColumns.slice(0, 20).join(', '))
-    }
-
-    // Confirmation type → ADIF field name mapping
+  /**
+   * Parse a Log4OM 2 SQLite database (.SQLite) — table "Log" with JSON confirmations.
+   */
+  const parseLog4OM = (db, schema) => {
+    const { selectCols, idx } = schema
     const CT_MAP = {
       'LOTW':   'LOTW_QSL_RCVD',
       'EQSL':   'EQSL_QSL_RCVD',
@@ -234,18 +245,11 @@ function DXCCAnalyzer() {
       'QRZCOM': 'QRZCOM_QSL_RCVD',
     }
 
-    const qsos = []
     const result = db.exec(`SELECT ${selectCols.map(c => `"${c}"`).join(', ')} FROM Log`)
-    db.close()
+    if (!result.length) return []
 
-    if (!result.length) return qsos
-
-    const values = result[0].values
-    // Build index from our SELECT column order (result[0].columns may be undefined in npm sql.js builds)
-    const idx = {}
-    selectCols.forEach((col, i) => { idx[col.toLowerCase()] = i })
-
-    values.forEach(row => {
+    const qsos = []
+    result[0].values.forEach(row => {
       const dxcc = row[idx.dxcc]
       if (!dxcc) return
 
@@ -263,7 +267,7 @@ function DXCCAnalyzer() {
       const rawDate = row[idx.qsodate] || ''
       qso.QSO_DATE = rawDate.replace(/^(\d{4})-(\d{2})-(\d{2}).*$/, '$1$2$3')
 
-      // Parse confirmation JSON
+      // Parse confirmation JSON array
       const confJson = row[idx.qsoconfirmations]
       if (confJson) {
         try {
@@ -277,8 +281,88 @@ function DXCCAnalyzer() {
 
       qsos.push(qso)
     })
-
     return qsos
+  }
+
+  /**
+   * Parse a Ham Radio Deluxe database (.hrdsql) — table "TABLE_HRD_CONTACTS_V07"
+   * with COL_ prefixed columns mapping directly to ADIF field names.
+   */
+  const parseHRD = (db, schema) => {
+    const { selectCols, idx } = schema
+
+    const result = db.exec(`SELECT ${selectCols.map(c => `"${c}"`).join(', ')} FROM TABLE_HRD_CONTACTS_V07`)
+    if (!result.length) return []
+
+    const qsos = []
+    result[0].values.forEach(row => {
+      const dxcc = row[idx.col_dxcc]
+      if (!dxcc) return
+
+      const qso = {
+        DXCC:                        String(dxcc),
+        COUNTRY:                     row[idx.col_country] || '',
+        BAND:                        (row[idx.col_band] || '').toLowerCase(),
+        CONT:                        row[idx.col_cont] || '',
+        MODE:                        row[idx.col_mode] || '',
+        STATION_CALLSIGN:            row[idx.col_station_callsign] || '',
+        OPERATOR:                    row[idx.col_operator] || '',
+        LOTW_QSL_RCVD:               row[idx.col_lotw_qsl_rcvd] || '',
+        EQSL_QSL_RCVD:               row[idx.col_eqsl_qsl_rcvd] || '',
+        QSL_RCVD:                    row[idx.col_qsl_rcvd] || '',
+        QRZCOM_QSO_DOWNLOAD_STATUS:  row[idx.col_qrzcom_qso_download_status] || '',
+      }
+
+      // Convert ISO date "2024-10-08" → YYYYMMDD
+      const rawDate = row[idx.col_qso_date] || ''
+      qso.QSO_DATE = rawDate.replace(/-/g, '')
+
+      qsos.push(qso)
+    })
+    return qsos
+  }
+
+  /**
+   * Parse a SQLite database file — auto-detects Log4OM (.SQLite) and HRD (.hrdsql).
+   * @param {ArrayBuffer} buffer - Raw file bytes
+   * @returns {Promise<Array>} Array of QSO objects
+   */
+  const parseSQLiteFile = async (buffer) => {
+    const { db, tableNames } = await openSQLiteDB(buffer)
+
+    try {
+      // Detect database type by table names
+      const isHRD = tableNames.some(t => t.toUpperCase().startsWith('TABLE_HRD_CONTACTS'))
+      const isLog4OM = tableNames.some(t => t === 'Log')
+
+      if (isHRD) {
+        const hrdTable = tableNames.find(t => t.toUpperCase().startsWith('TABLE_HRD_CONTACTS'))
+        const neededCols = [
+          'COL_DXCC', 'COL_COUNTRY', 'COL_BAND', 'COL_CONT', 'COL_QSO_DATE',
+          'COL_MODE', 'COL_STATION_CALLSIGN', 'COL_OPERATOR',
+          'COL_LOTW_QSL_RCVD', 'COL_EQSL_QSL_RCVD', 'COL_QSL_RCVD',
+          'COL_QRZCOM_QSO_DOWNLOAD_STATUS'
+        ]
+        const schema = discoverColumns(db, hrdTable, neededCols)
+        if (!schema || !schema.findCol('COL_DXCC')) {
+          throw new Error('Required column "COL_DXCC" not found in ' + hrdTable)
+        }
+        return parseHRD(db, schema)
+      }
+
+      if (isLog4OM) {
+        const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations']
+        const schema = discoverColumns(db, 'Log', neededCols)
+        if (!schema || !schema.findCol('dxcc')) {
+          throw new Error('Required column "dxcc" not found in Log table')
+        }
+        return parseLog4OM(db, schema)
+      }
+
+      throw new Error('Unsupported database format. Expected Log4OM (table "Log") or HRD (table "TABLE_HRD_CONTACTS_V07"). Found tables: ' + tableNames.join(', '))
+    } finally {
+      db.close()
+    }
   }
 
   /**
@@ -471,17 +555,17 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Handle file upload — supports ADIF (.adi/.adif) and Log4OM SQLite (.SQLite)
+   * Handle file upload — supports ADIF (.adi/.adif), Log4OM (.SQLite), and HRD (.hrdsql)
    */
   const handleFileUpload = (event) => {
     const file = event.target.files[0]
     if (!file) return
 
     setFileName(file.name)
-    const isSQLite = /\.sqlite$/i.test(file.name)
+    const isSQLite = /\.(sqlite|hrdsql)$/i.test(file.name)
 
     if (isSQLite && __SINGLEFILE__) {
-      alert('SQLite import is not available in the standalone version. Please use the hosted version or export your log as ADIF from Log4OM.')
+      alert('Database import is not available in the standalone version. Please use the hosted version or export your log as ADIF.')
       return
     }
 
@@ -1838,7 +1922,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.5.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.5.1</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -1849,7 +1933,7 @@ function DXCCAnalyzer() {
                 Reload
                 <input
                   type="file"
-                  accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite"}
+                  accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite,.hrdsql"}
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -1883,12 +1967,12 @@ function DXCCAnalyzer() {
         <div className="bg-gray-800 rounded-lg p-12 text-center border-2 border-dashed border-gray-600">
           <Upload className="mx-auto mb-4 w-16 h-16 text-gray-500" />
           <h2 className="text-2xl font-semibold mb-2">Upload Your Logbook</h2>
-          <p className="text-gray-400 mb-6">{__SINGLEFILE__ ? 'Supports ADIF files (.adi/.adif)' : 'Supports ADIF (.adi/.adif) and Log4OM database (.SQLite)'} — all processing happens locally in your browser</p>
+          <p className="text-gray-400 mb-6">{__SINGLEFILE__ ? 'Supports ADIF files (.adi/.adif)' : 'Supports ADIF (.adi/.adif), Log4OM (.SQLite), and HRD (.hrdsql)'} — all processing happens locally in your browser</p>
           <label className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer transition">
             <span>Choose File</span>
             <input
               type="file"
-              accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite"}
+              accept={__SINGLEFILE__ ? ".adi,.adif" : ".adi,.adif,.sqlite,.SQLite,.hrdsql"}
               onChange={handleFileUpload}
               className="hidden"
             />
