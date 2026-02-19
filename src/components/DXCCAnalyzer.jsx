@@ -373,7 +373,14 @@ function DXCCAnalyzer() {
    *   Mode→MODE, CONT→CONT, STATION_CALLSIGN, Operator→OPERATOR,
    *   APP_DXKeeper_LotW_QSL_RCVD→LOTW_QSL_RCVD, APP_DXKeeper_EQSL_QSL_RCVD→EQSL_QSL_RCVD,
    *   QSL_Rcvd→QSL_RCVD, APP_DXKeeper_QRZcom_QSL_Rcvd→QRZCOM_QSL_RCVD
-   * @param {ArrayBuffer} arrayBuffer - Raw file bytes
+   *
+   * Safety: Read-only by design.
+   *   - The browser FileReader API provides an in-memory ArrayBuffer copy; no file handle is retained.
+   *   - mdb-reader parses the Access binary format in pure JavaScript without the Jet/ACE engine,
+   *     so no lock files (.ldb/.laccdb) are created and no write-back to disk occurs.
+   *   - The original database file is never modified (mtime/ctime unchanged).
+   *
+   * @param {ArrayBuffer} arrayBuffer - Raw file bytes (in-memory copy from FileReader)
    * @returns {Promise<Array>} Array of QSO objects compatible with parseADIF() output
    */
   const parseDXKeeperFile = async (arrayBuffer) => {

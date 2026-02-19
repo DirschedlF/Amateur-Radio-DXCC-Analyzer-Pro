@@ -152,6 +152,13 @@ const CT_MAP = {
 
 **Library**: `mdb-reader` — pure JavaScript Microsoft Access reader, no WebAssembly required. Works in standalone build. Requires `Buffer` polyfill (`buffer` npm package) set globally via `main.jsx`. `process` polyfill set via inline `<script>` in `index.html`.
 
+**Safety / Read-Only Guarantee**: The DXKeeper database is never modified:
+
+- The browser `FileReader.readAsArrayBuffer()` creates a complete in-memory copy; no file handle is retained after reading.
+- mdb-reader parses the Access binary format in pure JavaScript — it does NOT use the Windows Jet/ACE engine, so no lock files (`.ldb`/`.laccdb`) are created and no write-back to disk occurs.
+- Verified: `mtime` (content modification time) and `ctime` (metadata change time) are unchanged after import. Only `atime` (OS-level read marker) may be updated by the OS at the filesystem level, which is outside application control.
+- Contrast with SQLite: sql.js requires explicit `PRAGMA query_only = ON` because SQLite has journaling/WAL mechanisms; mdb-reader has no write capability at all.
+
 **Table Used**: `QSOs` (126 columns). `QSO_Begin` is a JavaScript `Date` object; DXKeeper uses year 4000 as null-date placeholder (skipped).
 
 **Field Mapping**:
