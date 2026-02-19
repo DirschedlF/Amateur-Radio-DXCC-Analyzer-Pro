@@ -3,6 +3,8 @@ import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, B
 import { Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
+import initSqlJs from 'sql.js'
+import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
 
 /**
  * DXCC Analyzer Pro - Main Component
@@ -185,31 +187,44 @@ function DXCCAnalyzer() {
   }
 
   /**
-   * Load sql.js WASM library dynamically from CDN
-   */
-  const loadSqlJs = () => {
-    return new Promise((resolve, reject) => {
-      if (window.initSqlJs) { resolve(window.initSqlJs); return }
-      const script = document.createElement('script')
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/sql-wasm.min.js'
-      script.onload = () => resolve(window.initSqlJs)
-      script.onerror = () => reject(new Error('Failed to load sql.js'))
-      document.head.appendChild(script)
-    })
-  }
-
-  /**
    * Parse a Log4OM 2 SQLite database file (.SQLite) and return QSO array
    * compatible with parseADIF() output format.
    * @param {ArrayBuffer} buffer - Raw file bytes
    * @returns {Promise<Array>} Array of QSO objects
    */
   const parseSQLiteFile = async (buffer) => {
-    const initSqlJs = await loadSqlJs()
     const SQL = await initSqlJs({
-      locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.12.0/${file}`
+      locateFile: () => sqlWasmUrl
     })
     const db = new SQL.Database(new Uint8Array(buffer))
+    db.run('PRAGMA query_only = ON')
+
+    // Verify database integrity (detects corruption from concurrent writes)
+    const intCheck = db.exec('PRAGMA integrity_check')
+    if (intCheck.length && intCheck[0].values[0][0] !== 'ok') {
+      db.close()
+      throw new Error('SQLite integrity check failed — the database may have been modified during read. Please try again or use a copy of the file.')
+    }
+
+    // Discover actual column names (case-insensitive matching)
+    const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table'")
+    const schemaResult = db.exec("PRAGMA table_info('Log')")
+    if (!schemaResult.length) {
+      db.close()
+      throw new Error('Table "Log" not found in database. Available tables: ' + (tables.length ? tables[0].values.map(r => r[0]).join(', ') : 'none'))
+    }
+    const dbColumns = schemaResult[0].values.map(row => row[1]) // column 1 = name
+    const colMap = {}
+    dbColumns.forEach(col => { colMap[col.toLowerCase()] = col })
+
+    const findCol = (name) => colMap[name.toLowerCase()] || null
+    const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations']
+    const selectCols = neededCols.map(c => findCol(c)).filter(Boolean)
+
+    if (!findCol('dxcc')) {
+      db.close()
+      throw new Error('Required column "dxcc" not found in Log table. Available columns: ' + dbColumns.slice(0, 20).join(', '))
+    }
 
     // Confirmation type → ADIF field name mapping
     const CT_MAP = {
@@ -220,16 +235,15 @@ function DXCCAnalyzer() {
     }
 
     const qsos = []
-    const result = db.exec(
-      'SELECT dxcc, country, band, cont, qsodate, mode, stationcallsign, operator, qsoconfirmations FROM Log'
-    )
+    const result = db.exec(`SELECT ${selectCols.map(c => `"${c}"`).join(', ')} FROM Log`)
     db.close()
 
     if (!result.length) return qsos
 
-    const { columns, values } = result[0]
+    const values = result[0].values
+    // Build index from our SELECT column order (result[0].columns may be undefined in npm sql.js builds)
     const idx = {}
-    columns.forEach((col, i) => { idx[col] = i })
+    selectCols.forEach((col, i) => { idx[col.toLowerCase()] = i })
 
     values.forEach(row => {
       const dxcc = row[idx.dxcc]

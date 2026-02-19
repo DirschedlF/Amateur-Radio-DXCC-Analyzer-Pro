@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **State Management**: React Hooks (useState, useMemo)
 - **Build Tool**: Vite (recommended for fast development)
 - **Language**: JavaScript (JSX)
-- **SQLite Engine**: sql.js (Emscripten/WASM) — loaded dynamically only when a `.SQLite` file is detected
+- **SQLite Engine**: sql.js (Emscripten/WASM) — bundled locally via npm, no CDN/network dependency
 
 ## Development Commands
 
@@ -76,9 +76,13 @@ The application is architected as a **Single-File-Component** for maximum portab
 
 **Detection**: File extension `.SQLite` (case-insensitive) triggers the SQLite code path instead of ADIF.
 
-**Library**: `sql.js` — Emscripten-compiled SQLite3 running as WebAssembly in the browser. Loaded from CDN dynamically only when a `.SQLite` file is detected (`loadSqlJs()` helper). The WASM binary is fetched and instantiated at runtime; no npm dependency required.
+**Library**: `sql.js` — Emscripten-compiled SQLite3 running as WebAssembly in the browser. Bundled locally as npm dependency; WASM binary served via Vite `?url` import. No CDN or network access required — consistent with the project's zero-network privacy guarantee.
 
-**Tables Used**: Only `Log` table is read (96 columns). `Informations` table is ignored.
+**Safety**: Database is opened read-only (`PRAGMA query_only = ON`) and integrity-checked (`PRAGMA integrity_check`) before reading. The original file is never modified.
+
+**Schema Discovery**: Column names are discovered dynamically via `PRAGMA table_info('Log')` with case-insensitive matching. This ensures compatibility across Log4OM versions even if column casing changes. Column index is built from the SELECT order (npm sql.js builds may omit `result[0].columns`).
+
+**Tables Used**: Only `Log` table is read (97 columns). `Informations` table is ignored.
 
 **Field Mapping**:
 | SQLite Column | Maps To | Conversion |
@@ -293,7 +297,9 @@ Three levels of statistics:
 ## Privacy & Security
 
 - **No Server Communication**: All processing happens client-side
+- **No Network Access**: Zero runtime network requests — all dependencies (including sql.js WASM) are bundled locally
 - **FileReader API**: Read files directly from user's local filesystem
+- **Read-Only Database Access**: SQLite files opened with `PRAGMA query_only = ON` and integrity-checked before use
 - **No Data Persistence**: Unless explicitly saved by user (localStorage optional)
 - **No Analytics**: No tracking or external API calls
 

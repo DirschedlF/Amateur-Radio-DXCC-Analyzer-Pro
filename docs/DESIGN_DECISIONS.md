@@ -149,12 +149,21 @@ Supporting Cabrillo would:
    - Log4OM 2 database has a clean, stable schema with only 2 tables (`Log`, `Informations`)
    - `Log` table maps cleanly to our internal data model (all required fields present)
    - Auto-detection by file extension (`.SQLite`) — no user decision required
-   - **sql.js** (Emscripten-compiled SQLite, WASM) runs 100% client-side; maintains privacy guarantee
+   - **sql.js** (Emscripten-compiled SQLite, WASM) bundled locally via npm — no CDN or network access at runtime
 
-4. **Privacy Maintained:**
-   - sql.js executes entirely in the browser via WebAssembly
-   - No data transmission to any server
+4. **Privacy & Safety:**
+   - sql.js executes entirely in the browser via WebAssembly, bundled as local npm dependency (no CDN)
+   - WASM binary served via Vite `?url` import — no `vite-plugin-static-copy` needed
+   - Zero network requests at runtime — consistent with project's privacy-first architecture
+   - Database opened read-only (`PRAGMA query_only = ON`) — write operations blocked at SQLite level
+   - `PRAGMA integrity_check` before reading — detects corruption from concurrent access
    - File is read via `FileReader` as `ArrayBuffer` (same as ADIF, different format)
+
+5. **Schema Discovery:**
+   - Column names discovered dynamically via `PRAGMA table_info('Log')` with case-insensitive matching
+   - Resilient to column casing differences across Log4OM versions
+   - Column index built from SELECT order rather than `result[0].columns` (npm sql.js builds may omit this property)
+   - Missing optional columns are silently skipped; only `dxcc` is required
 
 #### Schema Mapping
 
