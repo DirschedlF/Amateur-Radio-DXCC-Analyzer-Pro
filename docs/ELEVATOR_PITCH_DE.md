@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.6.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.7.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -30,7 +30,7 @@
 - **Mehrdimensionale Filterung**: Betriebsart, Operator, Kontinent, Band, Bestätigungsplattform, Datumsbereich
 - **Suche nach Ländername, DXCC-ID oder Rufzeichen-Präfix** - finden Sie alles sofort
 - **Fehlende Gebiete anzeigen** und Lücken in Ihrer DXCC-Abdeckung identifizieren
-- **Interaktive Charts**: Kontinente-Aufschlüsselung, Band-Aktivität, Band × Kontinent Heatmap
+- **Interaktive Charts**: Kontinente-Aufschlüsselung, Band-Aktivität, Band × Kontinent Heatmap, **DXCC Progress Over Time** *(NEU in v2.7.0)* kumulativer Chart zur Verfolgung neu gearbeiteter Gebiete über Zeit
 - **Intelligente Filter-Interaktion**: Filter arbeiten kontextbezogen zusammen
 - **Aktive Filter-Tags** mit visuellen Chips und Ein-Klick-Entfernung
 
@@ -193,7 +193,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.6.0 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.7.0 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland
