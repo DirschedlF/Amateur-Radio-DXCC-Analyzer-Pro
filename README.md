@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.7.0**
+**Version 2.8.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.7.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.8.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -48,14 +48,15 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Visual Sort Indicators** - Chevron icons show current sort column and direction
 
 ### Visual Charts & Graphs
+- **DXCC World Map** *(NEW in v2.8.0)* - Interactive world map displaying all DXCC entities as colored markers; color indicates status (Green=Confirmed, Amber=Worked, Red=Most Wanted Not Worked, Gray=Not Worked); includes fullscreen mode for detailed exploration; coordinates sourced from [dxcc-world-map](https://github.com/amazingproducer/dxcc-world-map) GeoJSON; hover tooltips show entity details; fully filter-reactive
 - **DXCC by Continent** - Stacked bar chart showing Confirmed vs Worked entities per continent; adds "Not Worked" segment in "All Entities" view; bar heights stable regardless of band or platform filter
 - **Band Activity** - Stacked bar chart visualizing DXCC coverage across all HF bands; adds "Not Worked" segment in "All Entities" view
 - **Confirmation Platforms** - Horizontal bar chart comparing LOTW, eQSL, QRZ, and Paper confirmations
 - **Band × Continent Heatmap** - Color-intensity grid revealing gaps in your DXCC coverage
 - **DXCC Progress Over Time** *(NEW in v2.7.0)* - Cumulative area chart showing new DXCC entities worked over time with auto-granularity (monthly/yearly); respects Mode, Operator, Band, and Continent filters; always shows full log history regardless of date filter
-- **Filter-Reactive** - All charts update dynamically when filters are applied
+- **Filter-Reactive** - All charts and map update dynamically when filters are applied
 - **Collapsible** - Toggle charts on/off via "Show Charts" button
-- **Print Charts** - Dedicated button to print all 4 charts in a 2×2 grid on a single A4 landscape page
+- **Print Charts** - Dedicated button to print all charts in a 2×2 grid on a single A4 landscape page
 - **Charts in Print Report** - When charts are visible, "Print Report" includes charts as the first page before the data table
 
 ### Interactive Dashboard

@@ -3,6 +3,8 @@ import { Upload, Download, Search, Filter, Printer, ChevronUp, ChevronDown, X, B
 import { Cell, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { lookupDXCC, getAllActiveDXCC, getWikipediaUrl } from '../utils/dxccEntities'
 import { getMostWantedData, getDXCCPrefix } from '../utils/mostWantedData'
+import { getCoordinates, hasSpecificCoordinates } from '../utils/dxccCoordinates'
+import DXCCWorldMap from './DXCCWorldMap'
 import initSqlJs from 'sql.js'
 import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url'
 // mdb-reader and buffer are dynamically imported in parseDXKeeperFile() to avoid
@@ -1196,6 +1198,96 @@ function DXCCAnalyzer() {
     return { continentData, bandData, platformData, heatmapData, allConts, bandsToShow }
   }, [filteredData, analyzedData, missingDXCC, searchTerm, filterStatus, filterContinent, filterBand, hiddenColumns])
 
+  // Map data for world map visualization
+  // Includes ALL entities (worked + not worked) with their coordinates and status
+  const mapData = useMemo(() => {
+    if (!analyzedData) return null
+
+    // Helper functions (same logic as chart data)
+    const isChartConfirmed = (data) => {
+      if (filterBand !== 'all') {
+        // Band filter active
+        if (filterConfirmation !== 'all') {
+          // Platform filter active too — check specific band+platform combo
+          return data.bandConfirmations?.[filterBand]?.[filterConfirmation] === true
+        }
+        // Band filter only — check any confirmation on that band
+        const bandConf = data.bandConfirmations?.[filterBand]
+        return bandConf && (bandConf.lotw || bandConf.eqsl || bandConf.qrz || bandConf.qsl)
+      }
+      // No band filter
+      if (filterConfirmation !== 'all') {
+        // Platform filter only — any band with that platform confirmed
+        return data[filterConfirmation] === true
+      }
+      // No filters — any confirmation on any band
+      return data.lotw || data.eqsl || data.qrz || data.qsl
+    }
+
+    const isChartWorked = (data) => {
+      if (filterBand !== 'all') {
+        // Band filter active — check if entity has C or W on that band
+        return data.bands?.[filterBand] === 'C' || data.bands?.[filterBand] === 'W'
+      }
+      // No band filter — entity is in analyzedData, so it's worked
+      return data.total > 0
+    }
+
+    // Build map entries from analyzedData + missingDXCC
+    const allEntities = [...Object.entries(analyzedData)]
+
+    // Add missing entities if "All Entities" view active
+    if (filterStatus === 'allentities' && missingDXCC) {
+      allEntities.push(...missingDXCC.map(([id, data]) => [id, data]))
+    }
+
+    // Apply filters (same logic as chartData)
+    const filtered = allEntities.filter(([id, data]) => {
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase()
+        const country = (data.country || '').toLowerCase()
+        const prefix = (data.prefix || '').toLowerCase()
+        if (!country.includes(term) && !id.includes(term) && !prefix.includes(term)) {
+          return false
+        }
+      }
+
+      // Continent filter
+      if (filterContinent !== 'all' && data.cont !== filterContinent) {
+        return false
+      }
+
+      // Status filter (unless "All Entities" which shows everything)
+      if (filterStatus !== 'allentities') {
+        if (filterStatus === 'confirmed' && !isChartConfirmed(data)) return false
+        if (filterStatus === 'worked' && (isChartConfirmed(data) || !isChartWorked(data))) return false
+        if (filterStatus === 'notworked' && isChartWorked(data)) return false
+      }
+
+      return true
+    })
+
+    // Map to marker data structure
+    return filtered.map(([id, data]) => {
+      const coords = getCoordinates(id)
+      const confirmed = isChartConfirmed(data)
+      const worked = isChartWorked(data)
+
+      return {
+        dxccId: id,
+        country: data.country || lookupDXCC(id)?.name || 'Unknown',
+        cont: data.cont || '',
+        coords: coords,
+        hasSpecificCoords: hasSpecificCoordinates(id),
+        status: confirmed ? 'confirmed' : worked ? 'worked' : 'notworked',
+        total: data.total || 0,
+        lastQso: data.lastQso || null,
+        mostWantedRank: data.mostWantedRank || null,
+      }
+    })
+  }, [analyzedData, missingDXCC, filterStatus, filterContinent, filterBand, filterConfirmation, searchTerm])
+
   // Cumulative DXCC progress over time (worked entities only)
   // Computed directly from raw logData.qsos — intentionally ignores the date range filter
   // so the chart always shows the full history regardless of the table's date filter.
@@ -2380,6 +2472,11 @@ function DXCCAnalyzer() {
               </div>
 
             </div>
+          )}
+
+          {/* DXCC World Map — full width map showing all entities */}
+          {showCharts && mapData && (
+            <DXCCWorldMap entities={mapData} printMode={printMode} />
           )}
 
           {/* DXCC Progress Over Time — separate block outside the 2-column grid
