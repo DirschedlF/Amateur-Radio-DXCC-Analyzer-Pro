@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.7.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.8.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Styling**: Tailwind CSS
 - **Icons**: Lucide-React
 - **Charts**: Recharts (BarChart, AreaChart, Heatmap)
+- **Maps**: Leaflet 1.9.4 + react-leaflet 4.x — interactive DXCC World Map with OpenStreetMap tiles
 - **State Management**: React Hooks (useState, useMemo)
 - **Build Tool**: Vite (recommended for fast development)
 - **Language**: JavaScript (JSX)
@@ -57,13 +58,13 @@ Used for the GitHub Release asset (`DXCC-Analyzer-Pro-vX.X.X-standalone.html`).
 ## Core Architecture
 
 ### Single-File Component Design
-The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~1900 lines) contains:
+The application is architected as a **Single-File-Component** for maximum portability. The main component (`DXCCAnalyzer.jsx`, ~2200 lines) contains:
 
 1. **ADIF Parser Module** - Regex-based extraction of ADIF tags
 2. **SQLite Parser Module** - Log4OM (`.SQLite`) and HRD (`.hrdsql`) database reader via sql.js WASM (auto-detected by table names)
 3. **Analysis Engine** - Band matrix logic and confirmation status calculation with pre-analysis filters (mode, operator, date)
 4. **Display Helpers** - Context-sensitive functions (`getDisplayQsos`, `getDisplayBandStatus`, `getDisplayConfirmation`) that adapt output to active filters
-5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, band x continent heatmap data (respects column visibility), and cumulative DXCC progress over time (`progressData` useMemo)
+5. **Chart Data Aggregation** - Memoized computation of continent breakdown, band activity, platform comparison, band x continent heatmap data (respects column visibility), cumulative DXCC progress over time (`progressData` useMemo), and geographic map data (`mapData` useMemo)
 6. **UI Components** - Dashboard, interactive table, filters, and export functionality
 7. **Export Module** - CSV (RFC-4180 compliant), JSON, and ADIF export from filtered data
 8. **Share Module** - URL-based filter state encoding/decoding via Base64 (`buildShareUrl`, `handleShare`, URL-restore `useEffect`)
@@ -351,6 +352,19 @@ Three levels of statistics:
 - **Band Activity**: Stacked bar chart per band
 - **Confirmation Platforms**: Horizontal bar chart (LOTW, eQSL, QRZ, Paper)
 - **Band x Continent Heatmap**: Color-intensity grid
+- **DXCC World Map** *(NEW in v2.8.0)* - Interactive geographic visualization of all DXCC entities
+  - Leaflet.js map with OpenStreetMap tiles (privacy-friendly)
+  - Color-coded CircleMarkers: Green (Confirmed), Amber (Worked), Red (Most Wanted not worked), Gray (Not worked)
+  - All 338 active DXCC entities with accurate coordinates from [dxcc-world-map](https://github.com/amazingproducer/dxcc-world-map) GeoJSON
+  - Hover tooltips showing entity name, DXCC ID, continent, status, QSO count, last QSO date/callsign, Most Wanted rank
+  - Fullscreen mode with toggle button (Maximize2/X icons from lucide-react)
+  - Uniform 8px markers (no animation for clarity)
+  - Fully filter-reactive: responds to mode, band, continent, platform, search, and status filters
+  - Data source: `mapData` useMemo computed from filtered `analyzedData` entries
+  - Component: `DXCCWorldMap.jsx` with coordinates utility `dxccCoordinates.js`
+  - Dark theme styling with `.leaflet-container-dark` and `.dxcc-marker-tooltip` classes
+  - Print mode support with reduced height
+  - Rendered below chart grid, before Progress Over Time chart
 - **DXCC Progress Over Time**: Cumulative AreaChart — new DXCC entities worked over time (v2.7.0)
   - Full-width chart rendered **outside** the 2-column `.chart-section` grid (avoids Chrome `grid-column: span` + `page-break-before` rendering bug)
   - `type="linear"` (no dots, `dot={false}`) with amber fill gradient
@@ -476,11 +490,16 @@ const isConfirmed = (qso) => {
 ```
 /src
   /components
-    DXCCAnalyzer.jsx     # Main single-file component (~1900 lines)
+    DXCCAnalyzer.jsx     # Main single-file component (~2200 lines)
+    DXCCWorldMap.jsx     # Interactive DXCC World Map component (v2.8.0)
+                         # Leaflet map with color-coded markers, fullscreen mode
   /utils
     dxccEntities.js      # DXCC entity lookup table (ADIF 3.1.6, ~400 entities)
                          # Format: { id: [name, continent, deleted, wikipediaSlug] }
                          # Exports: lookupDXCC(), getAllActiveDXCC(), getWikipediaUrl()
+    dxccCoordinates.js   # Geographic coordinates for 338 active DXCC entities (v2.8.0)
+                         # Source: dxcc-world-map GeoJSON (amazingproducer)
+                         # Exports: getCoordinates(), hasSpecificCoordinates(), CONTINENT_FALLBACKS
     mostWantedData.js    # Most Wanted DXCC rankings (GDXF data)
                          # Exports: getMostWantedData(), getDXCCPrefix(), getMostWantedRank()
     Digital.csv          # Most Wanted rankings for digital modes (340 entities)
@@ -490,7 +509,7 @@ const isConfirmed = (qso) => {
   /hooks                 # (empty, reserved for future custom hooks)
   App.jsx                # Root component
   main.jsx               # Entry point
-  index.css              # Global styles, Tailwind directives, print styles
+  index.css              # Global styles, Tailwind directives, print styles, Leaflet dark theme
 ```
 
 ## Print Styles (index.css)
