@@ -1,12 +1,12 @@
 # Amateur Radio DXCC Analyzer Pro
 
-**Version 2.8.0**
+**Version 2.9.0**
 
 A high-performance, browser-based application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. Track your DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms with complete privacy - all processing happens client-side.
 
 **Developed by Fritz (DK9RC)**
 
-![Version](https://img.shields.io/badge/version-2.8.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react)
 ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?logo=tailwind-css)
@@ -38,6 +38,7 @@ A high-performance, browser-based application for analyzing amateur radio logboo
 - **Confirmation Platform Filter** - Filter by LOTW, eQSL, QRZ, or Paper
 - **Band Filter** - Focus analysis on a single band (160m-6m)
 - **Date Range Filter** - Analyze specific time periods with presets (This Year, Last Year, Last 12 Months) or custom date range
+- **SNR Filter** *(NEW in v2.9.0)* - Filter digital mode QSOs by Signal-to-Noise Ratio; separate RX and TX thresholds (-20 to +10 dB); perfect for FT2, FT8, FT4 quality control; supports ADIF and all database formats
 - **Active Filter Tags** - Visual chips showing active filters with individual remove buttons and "Reset All"
 - **Intelligent Filter Interaction** - Filters work together contextually: band status respects platform filter, confirmation checkmarks respect band filter, QSO counts respect both
 
