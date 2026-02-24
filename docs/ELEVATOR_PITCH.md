@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch
 
-**Version 2.8.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.9.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -27,7 +27,8 @@
 - **Data source**: [GDXF Most Wanted 2024 - Germany](https://gdxf.de/mostwanted/index.php?year=2024)
 
 ### 🔍 **Advanced Filtering & Analysis**
-- **Multi-dimensional filtering**: mode, operator, continent, band, confirmation platform, date range
+- **Multi-dimensional filtering**: mode, operator, continent, band, confirmation platform, date range, **SNR thresholds** *(NEW in v2.9.0)*
+- **SNR filtering for digital modes** *(NEW in v2.9.0)* - filter by signal strength (RX/TX dB thresholds) for quality control; perfect for FT2, FT8, FT4; supports ADIF and all database formats
 - **Search by country name, DXCC ID, or callsign prefix** - find anything instantly
 - **View missing entities** and identify gaps in your DXCC coverage
 - **Interactive DXCC World Map** *(NEW in v2.8.0)* - geographic visualization of all DXCC entities with color-coded markers (Confirmed/Worked/Most Wanted/Not Worked); fullscreen mode; hover tooltips; all 338 entities with accurate coordinates; fully filter-reactive
@@ -136,7 +137,7 @@
 ## Open Source & Community
 
 - **Free and Open Source** - MIT Licensed
-- **Active Development** - Version 2.8.0 released February 2026
+- **Active Development** - Version 2.9.0 released February 2026
 - **Community Driven** - Built by amateur radio operators, for amateur radio operators
 - **Well Documented** - Comprehensive README and developer guidance
 

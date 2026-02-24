@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.8.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.9.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -231,6 +231,7 @@ Filters are organized in two layers:
 - Mode filter (SSB, CW, Digital)
 - Operator filter (STATION_CALLSIGN)
 - Date range filter (presets + custom range)
+- SNR filter (RX/TX signal strength thresholds for digital modes) *(NEW in v2.9.0)*
 
 **Post-Analysis Filters** (applied in `filteredData` useMemo):
 - Search (country name or DXCC ID)
@@ -459,6 +460,36 @@ Handle Log4OM-specific ADIF field extensions, particularly for QRZ.com confirmat
 - **CW**: Morse code (CW)
 - **Digital**: FT8, FT4, VARA HF, RTTY, PSK31, PSK63, JT65, JT9, WINMOR, ARDOP, PACTOR, and other HF digital modes
 - **Unknown**: VHF/UHF modes (FM, DMR) and other modes not categorized above
+
+### SNR Filter (v2.9.0)
+
+Filters QSOs by Signal-to-Noise Ratio for digital modes. Parses RST fields in dB format (e.g., "-10", "+05").
+
+**ADIF Fields**: `RST_SENT` (TX signal), `RST_RCVD` (RX signal)
+
+**Database Field Mapping**:
+- **Log4OM**: `rstsent`, `rstrcvd` (no underscore)
+- **HRD**: `COL_RST_SENT`, `COL_RST_RCVD`
+- **DXKeeper**: `RST_Sent`, `RST_Rcvd`
+
+**Helper Function**:
+```javascript
+const parseSignalReport = (rstString) => {
+  if (!rstString) return null
+  const trimmed = rstString.trim()
+  const match = trimmed.match(/^([+-]\d+)$/)
+  if (!match) return null  // Not dB format (e.g., "599")
+  return parseInt(match[1], 10)
+}
+```
+
+**Thresholds**: Seven levels (-20, -15, -10, -5, 0, +5, +10 dB) for both RX and TX
+
+**Filter Logic**: AND operation - both RX and TX thresholds must be met. QSOs without parseable dB values are excluded when filter is active.
+
+**UI**: Two separate dropdowns (RX SNR / TX SNR) with "All SNR" default
+
+**Use Case**: Quality filtering for digital modes (e.g., FT2 requires SNR ≥ -10 dB)
 
 ## Common Development Patterns
 

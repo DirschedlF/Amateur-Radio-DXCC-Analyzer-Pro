@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch (Deutsch)
 
-**Version 2.8.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.9.0** | Entwickelt von Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -27,10 +27,11 @@
 - **Datenquelle**: [GDXF Most Wanted 2024 - Deutschland](https://gdxf.de/mostwanted/index.php?year=2024)
 
 ### 🔍 **Erweiterte Filter & Analyse**
-- **Mehrdimensionale Filterung**: Betriebsart, Operator, Kontinent, Band, Bestätigungsplattform, Datumsbereich
+- **Mehrdimensionale Filterung**: Betriebsart, Operator, Kontinent, Band, Bestätigungsplattform, Datumsbereich, **SNR-Schwellenwerte** *(NEU in v2.9.0)*
+- **SNR-Filterung für Digitalmodi** *(NEU in v2.9.0)* - Filter nach Signalstärke (RX/TX dB-Schwellenwerte) für Qualitätskontrolle; perfekt für FT2, FT8, FT4; unterstützt ADIF und alle Datenbankformate
 - **Suche nach Ländername, DXCC-ID oder Rufzeichen-Präfix** - finden Sie alles sofort
 - **Fehlende Gebiete anzeigen** und Lücken in Ihrer DXCC-Abdeckung identifizieren
-- **Interaktive DXCC-Weltkarte** *(NEU in v2.8.0)* - geografische Visualisierung aller DXCC-Gebiete mit farbcodierten Markern (Bestätigt/Gearbeitet/Most Wanted/Nicht Gearbeitet); Vollbild-Modus; Hover-Tooltips; alle 338 Gebiete mit exakten Koordinaten; vollständig filterreaktiv
+- **Interaktive DXCC-Weltkarte** *(NEU in v2.9.0)* - geografische Visualisierung aller DXCC-Gebiete mit farbcodierten Markern (Bestätigt/Gearbeitet/Most Wanted/Nicht Gearbeitet); Vollbild-Modus; Hover-Tooltips; alle 338 Gebiete mit exakten Koordinaten; vollständig filterreaktiv
 - **Interaktive Charts**: Kontinente-Aufschlüsselung, Band-Aktivität, Band × Kontinent Heatmap, **DXCC Progress Over Time** *(NEU in v2.7.0)* kumulativer Chart zur Verfolgung neu gearbeiteter Gebiete über Zeit
 - **Intelligente Filter-Interaktion**: Filter arbeiten kontextbezogen zusammen
 - **Aktive Filter-Tags** mit visuellen Chips und Ein-Klick-Entfernung
@@ -194,7 +195,7 @@
 ## Open Source & Community
 
 - **Frei und Open Source** - MIT Lizenz
-- **Aktive Entwicklung** - Version 2.8.0 veröffentlicht Februar 2026
+- **Aktive Entwicklung** - Version 2.9.0 veröffentlicht Februar 2026
 - **Community-getrieben** - Von Funkamateuren für Funkamateure entwickelt
 - **Gut dokumentiert** - Umfassendes README und Entwickler-Anleitungen
 - **Deutsche und internationale Community** - GDXF Most Wanted Daten speziell für Deutschland

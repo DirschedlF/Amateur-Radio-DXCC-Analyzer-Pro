@@ -40,6 +40,8 @@ function DXCCAnalyzer() {
   const [filterDateTo, setFilterDateTo] = useState('')       // 'YYYY-MM-DD' format for <input type="date">
   const [shareCopied, setShareCopied] = useState(false)      // Share button feedback
   const [showColumnConfig, setShowColumnConfig] = useState(false) // Column config panel visibility
+  const [filterSnrRcvd, setFilterSnrRcvd] = useState('all')  // RX SNR filter (my reception)
+  const [filterSnrSent, setFilterSnrSent] = useState('all')  // TX SNR filter (their reception of me)
 
   // Supported bands
   const BANDS = ['160m', '80m', '60m', '40m', '30m', '20m', '17m', '15m', '12m', '10m', '6m']
@@ -265,6 +267,8 @@ function DXCCAnalyzer() {
         MODE:             row[idx.mode] || '',
         STATION_CALLSIGN: row[idx.stationcallsign] || '',
         OPERATOR:         row[idx.operator] || '',
+        RST_SENT:         row[idx.rstsent] || '',
+        RST_RCVD:         row[idx.rstrcvd] || '',
       }
 
       // Convert ISO datetime "2024-10-04 07:00:00Z" → YYYYMMDD
@@ -315,6 +319,8 @@ function DXCCAnalyzer() {
         EQSL_QSL_RCVD:               row[idx.col_eqsl_qsl_rcvd] || '',
         QSL_RCVD:                    row[idx.col_qsl_rcvd] || '',
         QRZCOM_QSO_DOWNLOAD_STATUS:  row[idx.col_qrzcom_qso_download_status] || '',
+        RST_SENT:                    row[idx.col_rst_sent] || '',
+        RST_RCVD:                    row[idx.col_rst_rcvd] || '',
       }
 
       // Convert ISO date "2024-10-08" → YYYYMMDD
@@ -345,7 +351,8 @@ function DXCCAnalyzer() {
           'COL_DXCC', 'COL_COUNTRY', 'COL_BAND', 'COL_CONT', 'COL_QSO_DATE',
           'COL_MODE', 'COL_STATION_CALLSIGN', 'COL_OPERATOR',
           'COL_LOTW_QSL_RCVD', 'COL_EQSL_QSL_RCVD', 'COL_QSL_RCVD',
-          'COL_QRZCOM_QSO_DOWNLOAD_STATUS'
+          'COL_QRZCOM_QSO_DOWNLOAD_STATUS',
+          'COL_RST_SENT', 'COL_RST_RCVD'
         ]
         const schema = discoverColumns(db, hrdTable, neededCols)
         if (!schema || !schema.findCol('COL_DXCC')) {
@@ -355,7 +362,7 @@ function DXCCAnalyzer() {
       }
 
       if (isLog4OM) {
-        const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations']
+        const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations', 'rstsent', 'rstrcvd']
         const schema = discoverColumns(db, 'Log', neededCols)
         if (!schema || !schema.findCol('dxcc')) {
           throw new Error('Required column "dxcc" not found in Log table')
@@ -425,6 +432,8 @@ function DXCCAnalyzer() {
         EQSL_QSL_RCVD:   row['APP_DXKeeper_EQSL_QSL_RCVD']         || '',
         QSL_RCVD:        row['QSL_Rcvd']                             || '',
         QRZCOM_QSL_RCVD: row['APP_DXKeeper_QRZcom_QSL_Rcvd']       || '',
+        RST_SENT:        row['RST_Sent']                             || '',
+        RST_RCVD:        row['RST_Rcvd']                             || '',
       }
     })
   }
@@ -470,6 +479,20 @@ function DXCCAnalyzer() {
   }
 
   /**
+   * Parse RST/Signal Report field to extract dB value for digital modes
+   * @param {string} rstString - RST field value (e.g., "-10", "+05", "599")
+   * @returns {number|null} dB value or null if not parseable
+   */
+  const parseSignalReport = (rstString) => {
+    if (!rstString) return null
+    const trimmed = rstString.trim()
+    // Match +/- followed by digits (digital mode SNR format)
+    const match = trimmed.match(/^([+-]\d+)$/)
+    if (!match) return null  // Not dB format (likely traditional RST like "599")
+    return parseInt(match[1], 10)
+  }
+
+  /**
    * Analyze QSOs and build DXCC matrix (with optional mode, operator, and date filter)
    * @param {Array} qsos - Array of QSO records
    * @param {string} modeFilter - Optional mode filter: 'all', 'ssb', 'cw', 'digital'
@@ -478,7 +501,7 @@ function DXCCAnalyzer() {
    * @param {string|null} dateTo - Optional end date in YYYYMMDD format
    * @returns {Object} DXCC analysis data
    */
-  const analyzeQSOs = (qsos, modeFilter = 'all', operatorFilter = 'all', dateFrom = null, dateTo = null) => {
+  const analyzeQSOs = (qsos, modeFilter = 'all', operatorFilter = 'all', dateFrom = null, dateTo = null, snrRcvdFilter = 'all', snrSentFilter = 'all') => {
     const dxccData = {}
 
     // Filter QSOs by mode category and operator if specified
@@ -501,6 +524,28 @@ function DXCCAnalyzer() {
         if (dateFrom && d < dateFrom) return false
         if (dateTo && d > dateTo) return false
         return true
+      })
+    }
+
+    // Filter QSOs by SNR thresholds if specified
+    if (snrRcvdFilter !== 'all' || snrSentFilter !== 'all') {
+      filteredQsos = filteredQsos.filter(qso => {
+        let passRcvd = true
+        let passSent = true
+
+        if (snrRcvdFilter !== 'all') {
+          const threshold = parseInt(snrRcvdFilter, 10)
+          const snr = parseSignalReport(qso.RST_RCVD)
+          passRcvd = (snr !== null && snr >= threshold)
+        }
+
+        if (snrSentFilter !== 'all') {
+          const threshold = parseInt(snrSentFilter, 10)
+          const snr = parseSignalReport(qso.RST_SENT)
+          passSent = (snr !== null && snr >= threshold)
+        }
+
+        return passRcvd && passSent
       })
     }
 
@@ -715,12 +760,12 @@ function DXCCAnalyzer() {
     return { min: toISO(minDate), max: toISO(maxDate) }
   }, [logData])
 
-  // Reanalyze data when mode, operator, or date filter changes
+  // Reanalyze data when mode, operator, date, or SNR filters change
   const analyzedData = useMemo(() => {
     if (!logData) return null
     const { from, to } = getDateRange(filterDatePreset)
-    return analyzeQSOs(logData.qsos, filterMode, filterOperator, from, to)
-  }, [logData, filterMode, filterOperator, filterDatePreset, filterDateFrom, filterDateTo])
+    return analyzeQSOs(logData.qsos, filterMode, filterOperator, from, to, filterSnrRcvd, filterSnrSent)
+  }, [logData, filterMode, filterOperator, filterDatePreset, filterDateFrom, filterDateTo, filterSnrRcvd, filterSnrSent])
 
   // Unfiltered stats: absolute totals across all modes/operators/dates (for "of X total" display)
   const unfilteredStats = useMemo(() => {
@@ -962,7 +1007,7 @@ function DXCCAnalyzer() {
   }, [analyzedData, missingDXCC, searchTerm, filterStatus, filterContinent, filterConfirmation, filterBand, sortColumn, sortDirection])
 
   // Check if any filter is active
-  const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all' || filterDatePreset !== 'all'
+  const hasActiveFilters = searchTerm || filterStatus !== 'all' || filterMode !== 'all' || filterOperator !== 'all' || filterContinent !== 'all' || filterConfirmation !== 'all' || filterBand !== 'all' || filterDatePreset !== 'all' || filterSnrRcvd !== 'all' || filterSnrSent !== 'all'
 
   // Calculate filtered statistics (based on what's shown in the table)
   const filteredStats = useMemo(() => {
@@ -1399,6 +1444,8 @@ function DXCCAnalyzer() {
     setFilterDatePreset('all')
     setFilterDateFrom('')
     setFilterDateTo('')
+    setFilterSnrRcvd('all')
+    setFilterSnrSent('all')
     setCurrentPage(1)
   }
 
@@ -1415,9 +1462,11 @@ function DXCCAnalyzer() {
     if (filterDatePreset !== 'all') params.set('date', filterDatePreset)
     if (filterDateFrom)          params.set('from', filterDateFrom)
     if (filterDateTo)            params.set('to', filterDateTo)
+    if (filterSnrRcvd !== 'all') params.set('snr_rx', filterSnrRcvd)
+    if (filterSnrSent !== 'all') params.set('snr_tx', filterSnrSent)
     const query = params.toString()
     return `${window.location.origin}${window.location.pathname}${query ? '?' + query : ''}`
-  }, [searchTerm, filterStatus, filterMode, filterOperator, filterContinent, filterConfirmation, filterBand, filterDatePreset, filterDateFrom, filterDateTo])
+  }, [searchTerm, filterStatus, filterMode, filterOperator, filterContinent, filterConfirmation, filterBand, filterDatePreset, filterDateFrom, filterDateTo, filterSnrRcvd, filterSnrSent])
 
   const handleShare = () => {
     const url = buildShareUrl()
@@ -1445,6 +1494,8 @@ function DXCCAnalyzer() {
     if (params.has('date'))   setFilterDatePreset(params.get('date'))
     if (params.has('from'))   setFilterDateFrom(params.get('from'))
     if (params.has('to'))     setFilterDateTo(params.get('to'))
+    if (params.has('snr_rx')) setFilterSnrRcvd(params.get('snr_rx'))
+    if (params.has('snr_tx')) setFilterSnrSent(params.get('snr_tx'))
   }, [])
 
   // --- Feature 10: Keyboard Shortcuts (searchInputRef only, effect moved after pagination) ---
@@ -1569,6 +1620,8 @@ function DXCCAnalyzer() {
     if (filterBand !== 'all') filterParts.push(`Band: ${filterBand}`)
     if (filterConfirmation !== 'all') filterParts.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
     if (filterDatePreset !== 'all') filterParts.push(`Date: ${getDateFilterLabel()}`)
+    if (filterSnrRcvd !== 'all') filterParts.push(`RX SNR: ${activeFilterLabels.snr[filterSnrRcvd]}`)
+    if (filterSnrSent !== 'all') filterParts.push(`TX SNR: ${activeFilterLabels.snr[filterSnrSent]}`)
     if (searchTerm) filterParts.push(`Search: "${searchTerm}"`)
     const filtersNote = filterParts.length > 0
       ? `> [!warning] Filtered Export\n> This export includes only a filtered subset: ${filterParts.join(' · ')}\n`
@@ -1980,7 +2033,16 @@ function DXCCAnalyzer() {
     mode: { ssb: 'SSB', cw: 'CW', digital: 'Digital' },
     status: { confirmed: 'Confirmed', worked: 'Worked Only', notworked: 'Not Worked', allentities: 'All Entities' },
     confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' },
-    date: { thisyear: 'This Year', lastyear: 'Last Year', last12m: 'Last 12 Months', custom: 'Custom Range' }
+    date: { thisyear: 'This Year', lastyear: 'Last Year', last12m: 'Last 12 Months', custom: 'Custom Range' },
+    snr: {
+      '-20': '-20 dB or higher',
+      '-15': '-15 dB or higher',
+      '-10': '-10 dB or higher',
+      '-5': '-5 dB or higher',
+      '0': '0 dB or higher',
+      '+5': '+5 dB or higher',
+      '+10': '+10 dB or higher'
+    }
   }
 
   // Pagination
@@ -2065,6 +2127,8 @@ function DXCCAnalyzer() {
     if (filterConfirmation !== 'all') filters.push(`Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`)
     if (filterBand !== 'all') filters.push(`Band: ${filterBand}`)
     if (filterDatePreset !== 'all') filters.push(`Date: ${getDateFilterLabel()}`)
+    if (filterSnrRcvd !== 'all') filters.push(`RX SNR: ${activeFilterLabels.snr[filterSnrRcvd]}`)
+    if (filterSnrSent !== 'all') filters.push(`TX SNR: ${activeFilterLabels.snr[filterSnrSent]}`)
 
     const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale', 'Wikipedia']
     const rows = filteredData.map(([id, data]) => {
@@ -2207,7 +2271,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.8.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.0</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -2238,6 +2302,8 @@ function DXCCAnalyzer() {
                     filterConfirmation !== 'all' && `Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`,
                     filterBand !== 'all' && `Band: ${filterBand}`,
                     filterDatePreset !== 'all' && `Date: ${getDateFilterLabel()}`,
+                    filterSnrRcvd !== 'all' && `RX SNR: ${activeFilterLabels.snr[filterSnrRcvd]}`,
+                    filterSnrSent !== 'all' && `TX SNR: ${activeFilterLabels.snr[filterSnrSent]}`,
                     searchTerm && `Search: "${searchTerm}"`
                   ].filter(Boolean).join(' | ')}
                 </div>
@@ -2553,6 +2619,8 @@ function DXCCAnalyzer() {
                 filterConfirmation !== 'all' && `Platform: ${activeFilterLabels.confirmation[filterConfirmation]}`,
                 filterBand !== 'all' && `Band: ${filterBand}`,
                 filterDatePreset !== 'all' && `Date: ${getDateFilterLabel()}`,
+                filterSnrRcvd !== 'all' && `RX SNR: ${activeFilterLabels.snr[filterSnrRcvd]}`,
+                filterSnrSent !== 'all' && `TX SNR: ${activeFilterLabels.snr[filterSnrSent]}`,
                 searchTerm && `Search: "${searchTerm}"`
               ].filter(Boolean).join(' | ')}
             </div>
@@ -2608,6 +2676,18 @@ function DXCCAnalyzer() {
                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
                   {getDateFilterLabel()}
                   <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterDatePreset('all'); setFilterDateFrom(''); setFilterDateTo(''); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterSnrRcvd !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  RX {activeFilterLabels.snr[filterSnrRcvd]}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterSnrRcvd('all'); setCurrentPage(1) }} />
+                </span>
+              )}
+              {filterSnrSent !== 'all' && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-700 rounded-full text-sm">
+                  TX {activeFilterLabels.snr[filterSnrSent]}
+                  <X className="w-3 h-3 cursor-pointer hover:text-red-400" onClick={() => { setFilterSnrSent('all'); setCurrentPage(1) }} />
                 </span>
               )}
               <button
@@ -2797,6 +2877,41 @@ function DXCCAnalyzer() {
                   />
                 </>
               )}
+            </div>
+
+            {/* SNR Filter (RX/TX) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-gray-400 text-sm">SNR:</span>
+              <select
+                value={filterSnrRcvd}
+                onChange={(e) => { setFilterSnrRcvd(e.target.value); setCurrentPage(1) }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition text-sm"
+                title="Filter by received signal strength (my RX)"
+              >
+                <option value="all">RX: All SNR</option>
+                <option value="-20">RX ≥ -20 dB</option>
+                <option value="-15">RX ≥ -15 dB</option>
+                <option value="-10">RX ≥ -10 dB</option>
+                <option value="-5">RX ≥ -5 dB</option>
+                <option value="0">RX ≥ 0 dB</option>
+                <option value="+5">RX ≥ +5 dB</option>
+                <option value="+10">RX ≥ +10 dB</option>
+              </select>
+              <select
+                value={filterSnrSent}
+                onChange={(e) => { setFilterSnrSent(e.target.value); setCurrentPage(1) }}
+                className="px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:bg-gray-600 transition text-sm"
+                title="Filter by sent signal strength (their RX of me)"
+              >
+                <option value="all">TX: All SNR</option>
+                <option value="-20">TX ≥ -20 dB</option>
+                <option value="-15">TX ≥ -15 dB</option>
+                <option value="-10">TX ≥ -10 dB</option>
+                <option value="-5">TX ≥ -5 dB</option>
+                <option value="0">TX ≥ 0 dB</option>
+                <option value="+5">TX ≥ +5 dB</option>
+                <option value="+10">TX ≥ +10 dB</option>
+              </select>
             </div>
             </div>{/* end Row 1 */}
 

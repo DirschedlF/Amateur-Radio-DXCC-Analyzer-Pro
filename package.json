@@ -1,7 +1,7 @@
 {
   "name": "amateur-radio-dxcc-analyzer-pro",
   "private": true,
-  "version": "2.8.0",
+  "version": "2.9.0",
   "type": "module",
   "description": "Browser-based ADIF logbook analyzer for amateur radio DXCC tracking",
   "scripts": {
