@@ -13,7 +13,9 @@ dist-ssr
 *.local
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/commands/
+!.claude/commands/**
 
 # Local documentation
 .doc/
