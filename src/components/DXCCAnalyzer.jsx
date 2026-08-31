@@ -49,7 +49,18 @@ function DXCCAnalyzer() {
   // --- Feature 11: Column visibility (localStorage persisted) ---
   const ALL_BAND_COLUMNS = BANDS
   const ALL_CONFIRM_COLUMNS = ['lotw', 'eqsl', 'qrz', 'qsl']
-  const CONFIRM_LABELS = { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' }
+  const CONFIRM_LABELS = { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'QSL' }
+
+  // Confirmation-platform filter values: the four real platforms plus the ARRL-DXCC
+  // composite "lotwqsl" — award credit is granted for a LoTW match OR a paper QSL card,
+  // so this option matches an entity/band confirmed by either.
+  const CONFIRM_FILTER_LABELS = { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'QSL', lotwqsl: 'LOTW + QSL' }
+
+  // Does a confirmation record satisfy the platform filter? `rec` is the entity `data`
+  // object or a `data.bandConfirmations[band]` object; both carry lotw/eqsl/qrz/qsl booleans.
+  const confirmMatches = (rec, platform) =>
+    platform === 'lotwqsl' ? !!(rec && (rec.lotw || rec.qsl)) : !!(rec && rec[platform])
+
 
   const loadColumnVisibility = () => {
     try {
@@ -265,6 +276,9 @@ function DXCCAnalyzer() {
         BAND:             (row[idx.band] || '').toLowerCase(),
         CONT:             row[idx.cont] || '',
         MODE:             row[idx.mode] || '',
+        // Worked station's callsign — Log4OM 2 names this column "Callsign"; older/other
+        // schemas may use "Call". Fall back across both.
+        CALL:             row[idx.callsign] || row[idx.call] || '',
         STATION_CALLSIGN: row[idx.stationcallsign] || '',
         OPERATOR:         row[idx.operator] || '',
         RST_SENT:         row[idx.rstsent] || '',
@@ -313,6 +327,7 @@ function DXCCAnalyzer() {
         BAND:                        (row[idx.col_band] || '').toLowerCase(),
         CONT:                        row[idx.col_cont] || '',
         MODE:                        row[idx.col_mode] || '',
+        CALL:                        row[idx.col_call] || '',
         STATION_CALLSIGN:            row[idx.col_station_callsign] || '',
         OPERATOR:                    row[idx.col_operator] || '',
         LOTW_QSL_RCVD:               row[idx.col_lotw_qsl_rcvd] || '',
@@ -349,7 +364,7 @@ function DXCCAnalyzer() {
         const hrdTable = tableNames.find(t => t.toUpperCase().startsWith('TABLE_HRD_CONTACTS'))
         const neededCols = [
           'COL_DXCC', 'COL_COUNTRY', 'COL_BAND', 'COL_CONT', 'COL_QSO_DATE',
-          'COL_MODE', 'COL_STATION_CALLSIGN', 'COL_OPERATOR',
+          'COL_MODE', 'COL_CALL', 'COL_STATION_CALLSIGN', 'COL_OPERATOR',
           'COL_LOTW_QSL_RCVD', 'COL_EQSL_QSL_RCVD', 'COL_QSL_RCVD',
           'COL_QRZCOM_QSO_DOWNLOAD_STATUS',
           'COL_RST_SENT', 'COL_RST_RCVD'
@@ -362,10 +377,13 @@ function DXCCAnalyzer() {
       }
 
       if (isLog4OM) {
-        const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'stationcallsign', 'operator', 'qsoconfirmations', 'rstsent', 'rstrcvd']
+        const neededCols = ['dxcc', 'country', 'band', 'cont', 'qsodate', 'mode', 'callsign', 'call', 'stationcallsign', 'operator', 'qsoconfirmations', 'rstsent', 'rstrcvd']
         const schema = discoverColumns(db, 'Log', neededCols)
         if (!schema || !schema.findCol('dxcc')) {
           throw new Error('Required column "dxcc" not found in Log table')
+        }
+        if (!schema.findCol('callsign') && !schema.findCol('call')) {
+          console.warn('[Log4OM] no worked-callsign column found. Available columns:', schema.dbColumns)
         }
         return parseLog4OM(db, schema)
       }
@@ -426,6 +444,7 @@ function DXCCAnalyzer() {
         CONT:            row['CONT']                                  || '',
         QSO_DATE:        qsoDate,
         MODE:            row['Mode']                                  || '',
+        CALL:            row['CALL']                                  || '',
         STATION_CALLSIGN: row['STATION_CALLSIGN']                    || '',
         OPERATOR:        row['Operator']                              || '',
         LOTW_QSL_RCVD:   row['APP_DXKeeper_LotW_QSL_RCVD']         || '',
@@ -476,6 +495,34 @@ function DXCCAnalyzer() {
     const fiveYearsAgo = new Date()
     fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
     return qsoDate < fiveYearsAgo
+  }
+
+  // Max QSO lines to list in a band badge's hover tooltip before collapsing the rest
+  const MAX_TOOLTIP_QSOS = 15
+
+  /**
+   * Build the multi-line native-title tooltip for a Worked/Confirmed band badge:
+   * every QSO on that band as "YYYY-MM-DD  CALL  (✓ if confirmed)", newest first,
+   * capped at MAX_TOOLTIP_QSOS with an "…and N more" line.
+   * @param {Array<{call: string|null, date: string|null, confirmed: boolean, lotw: boolean, eqsl: boolean, qsl: boolean, qrz: boolean}>} qsoList
+   * @param {boolean} stale - append the "no confirmation in 5+ years" note
+   * @param {string} platform - active confirmation-platform filter; when not 'all',
+   *   the ✓ marks confirmation on that platform (or the "lotwqsl" composite) rather than any platform
+   * @returns {string|undefined} tooltip text, or undefined when there is nothing to show
+   */
+  const buildBandQsoTooltip = (qsoList, stale, platform) => {
+    if (!qsoList || qsoList.length === 0) return undefined
+    const byPlatform = platform && platform !== 'all'
+    const sorted = [...qsoList].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    const lines = sorted.slice(0, MAX_TOOLTIP_QSOS).map(q => {
+      const d = formatQsoDate(q.date) || 'unknown date'
+      const confirmed = byPlatform ? confirmMatches(q, platform) : q.confirmed
+      return `${d}  ${q.call || '—'}${confirmed ? '  ✓' : ''}`
+    })
+    const parts = [`${qsoList.length} QSO${qsoList.length === 1 ? '' : 's'} on this band:`, ...lines]
+    if (sorted.length > MAX_TOOLTIP_QSOS) parts.push(`…and ${sorted.length - MAX_TOOLTIP_QSOS} more`)
+    if (stale) parts.push('– no confirmation in 5+ years')
+    return parts.join('\n')
   }
 
   /**
@@ -583,7 +630,7 @@ function DXCCAnalyzer() {
           bands: {},
           bandQsos: {},
           bandConfirmations: {},
-          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
+          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0, lotwqsl: 0 },
           bandPlatformQsos: {},
           lastQso: null,
           lastQsoCall: null,
@@ -592,17 +639,19 @@ function DXCCAnalyzer() {
           bandLastQsoCall: {},
           firstQso: null,           // Earliest QSO date (YYYYMMDD) — for progress chart
           firstConfirmedDate: null, // Earliest confirmed QSO date (YYYYMMDD) — for progress chart
-          bandFirstQso: {}          // Earliest QSO date per band (YYYYMMDD) — for band-filtered progress chart
+          bandFirstQso: {},         // Earliest QSO date per band (YYYYMMDD) — for band-filtered progress chart
+          bandQsoList: {}           // All QSOs per band: [{ call, date, confirmed }] — for band badge hover tooltip
         }
 
         BANDS.forEach(b => {
           dxccData[dxccId].bands[b] = null
           dxccData[dxccId].bandQsos[b] = 0
           dxccData[dxccId].bandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
-          dxccData[dxccId].bandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+          dxccData[dxccId].bandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0, lotwqsl: 0 }
           dxccData[dxccId].bandLastQso[b] = null
           dxccData[dxccId].bandLastQsoCall[b] = null
           dxccData[dxccId].bandFirstQso[b] = null
+          dxccData[dxccId].bandQsoList[b] = []
         })
       }
 
@@ -637,6 +686,8 @@ function DXCCAnalyzer() {
       if (isEqsl) { dxccData[dxccId].eqsl = true; dxccData[dxccId].platformQsos.eqsl++ }
       if (isQsl) { dxccData[dxccId].qsl = true; dxccData[dxccId].platformQsos.qsl++ }
       if (isQrz) { dxccData[dxccId].qrz = true; dxccData[dxccId].platformQsos.qrz++ }
+      // ARRL-DXCC composite: one count per QSO credited by LoTW or a paper QSL
+      if (isLotw || isQsl) dxccData[dxccId].platformQsos.lotwqsl++
 
       // Track first confirmed QSO date (for progress chart)
       if (confirmed && qsoDate) {
@@ -662,6 +713,13 @@ function DXCCAnalyzer() {
           }
         }
 
+        // Record every QSO on this band for the band badge's hover tooltip.
+        // Keep the per-platform flags so the tooltip's ✓ can follow the platform filter.
+        dxccData[dxccId].bandQsoList[normalizedBand].push({
+          call: qsoCall, date: qsoDate, confirmed,
+          lotw: isLotw, eqsl: isEqsl, qsl: isQsl, qrz: isQrz
+        })
+
         if (confirmed) {
           dxccData[dxccId].bands[normalizedBand] = 'C'
         } else if (!currentStatus) {
@@ -675,6 +733,7 @@ function DXCCAnalyzer() {
         if (isEqsl) { bc.eqsl = true; bpq.eqsl++ }
         if (isQsl) { bc.qsl = true; bpq.qsl++ }
         if (isQrz) { bc.qrz = true; bpq.qrz++ }
+        if (isLotw || isQsl) bpq.lotwqsl++
       }
     })
 
@@ -841,7 +900,7 @@ function DXCCAnalyzer() {
           emptyBands[b] = null
           emptyBandQsos[b] = 0
           emptyBandConfirmations[b] = { lotw: false, eqsl: false, qrz: false, qsl: false }
-          emptyBandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 }
+          emptyBandPlatformQsos[b] = { lotw: 0, eqsl: 0, qrz: 0, qsl: 0, lotwqsl: 0 }
           emptyBandLastQso[b] = null
         })
 
@@ -864,7 +923,7 @@ function DXCCAnalyzer() {
           bands: emptyBands,
           bandQsos: emptyBandQsos,
           bandConfirmations: emptyBandConfirmations,
-          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0 },
+          platformQsos: { lotw: 0, eqsl: 0, qrz: 0, qsl: 0, lotwqsl: 0 },
           bandPlatformQsos: emptyBandPlatformQsos,
           lastQso: null,
           lastQsoCall: null,
@@ -887,8 +946,8 @@ function DXCCAnalyzer() {
 
   // Get display confirmation status (respects band filter)
   const getDisplayConfirmation = (data, platform) => {
-    if (filterBand !== 'all') return data.bandConfirmations[filterBand]?.[platform] || false
-    return data[platform]
+    if (filterBand !== 'all') return confirmMatches(data.bandConfirmations[filterBand], platform)
+    return confirmMatches(data, platform)
   }
 
   // Get display band status (respects confirmation platform filter)
@@ -896,7 +955,7 @@ function DXCCAnalyzer() {
     const status = data.bands[band]
     if (!status) return null
     if (filterConfirmation !== 'all') {
-      if (data.bandConfirmations[band]?.[filterConfirmation]) return 'C'
+      if (confirmMatches(data.bandConfirmations[band], filterConfirmation)) return 'C'
       if (data.bandQsos[band] > 0) return 'W'
       return null
     }
@@ -950,9 +1009,9 @@ function DXCCAnalyzer() {
     // Apply confirmation platform filter (skip for notworked)
     if (filterConfirmation !== 'all' && filterStatus !== 'notworked') {
       if (filterBand !== 'all') {
-        entries = entries.filter(([_, data]) => data.bandConfirmations[filterBand]?.[filterConfirmation] === true)
+        entries = entries.filter(([_, data]) => confirmMatches(data.bandConfirmations[filterBand], filterConfirmation))
       } else {
-        entries = entries.filter(([_, data]) => data[filterConfirmation] === true)
+        entries = entries.filter(([_, data]) => confirmMatches(data, filterConfirmation))
       }
     }
 
@@ -1117,9 +1176,9 @@ function DXCCAnalyzer() {
       if (filterConfirmation !== 'all') {
         // Platform filter active: confirmed = confirmed on this specific platform
         if (filterBand !== 'all') {
-          return data.bandConfirmations[filterBand]?.[filterConfirmation] === true
+          return confirmMatches(data.bandConfirmations[filterBand], filterConfirmation)
         }
-        return data[filterConfirmation] === true
+        return confirmMatches(data, filterConfirmation)
       }
       // No platform filter: confirmed = any confirmation on the relevant band(s)
       if (filterBand !== 'all') {
@@ -1184,7 +1243,7 @@ function DXCCAnalyzer() {
         if (bandStatus === null) return // no activity on this band
         // For band chart: "confirmed" respects platform filter per this specific band
         const bandConfirmed = filterConfirmation !== 'all'
-          ? data.bandConfirmations[band]?.[filterConfirmation] === true
+          ? confirmMatches(data.bandConfirmations[band], filterConfirmation)
           : bandStatus === 'C'
         if (bandConfirmed) confirmed++
         else workedOnly++ // has activity but not confirmed per current filter
@@ -1217,7 +1276,7 @@ function DXCCAnalyzer() {
       { name: 'LOTW', count: platformCounts.lotw, fill: '#3b82f6' },
       { name: 'eQSL', count: platformCounts.eqsl, fill: '#8b5cf6' },
       { name: 'QRZ', count: platformCounts.qrz, fill: '#f59e0b' },
-      { name: 'Paper', count: platformCounts.qsl, fill: '#ef4444' }
+      { name: 'QSL', count: platformCounts.qsl, fill: '#ef4444' }
     ]
 
     // Band x Continent heatmap (respects all filters)
@@ -1254,7 +1313,7 @@ function DXCCAnalyzer() {
         // Band filter active
         if (filterConfirmation !== 'all') {
           // Platform filter active too — check specific band+platform combo
-          return data.bandConfirmations?.[filterBand]?.[filterConfirmation] === true
+          return confirmMatches(data.bandConfirmations?.[filterBand], filterConfirmation)
         }
         // Band filter only — check any confirmation on that band
         const bandConf = data.bandConfirmations?.[filterBand]
@@ -1263,7 +1322,7 @@ function DXCCAnalyzer() {
       // No band filter
       if (filterConfirmation !== 'all') {
         // Platform filter only — any band with that platform confirmed
-        return data[filterConfirmation] === true
+        return confirmMatches(data, filterConfirmation)
       }
       // No filters — any confirmation on any band
       return data.lotw || data.eqsl || data.qrz || data.qsl
@@ -1566,7 +1625,7 @@ function DXCCAnalyzer() {
         `LoTW: ${data.lotw ? '✅' : '❌'}`,
         `eQSL: ${data.eqsl ? '✅' : '❌'}`,
         `QRZ: ${data.qrz ? '✅' : '❌'}`,
-        `Paper: ${data.qsl ? '✅' : '❌'}`,
+        `QSL: ${data.qsl ? '✅' : '❌'}`,
       ].join('  ·  ')
 
       const body = [
@@ -2032,7 +2091,7 @@ function DXCCAnalyzer() {
   const activeFilterLabels = {
     mode: { ssb: 'SSB', cw: 'CW', digital: 'Digital' },
     status: { confirmed: 'Confirmed', worked: 'Worked Only', notworked: 'Not Worked', allentities: 'All Entities' },
-    confirmation: { lotw: 'LOTW', eqsl: 'eQSL', qrz: 'QRZ', qsl: 'Paper' },
+    confirmation: CONFIRM_FILTER_LABELS,
     date: { thisyear: 'This Year', lastyear: 'Last Year', last12m: 'Last 12 Months', custom: 'Custom Range' },
     snr: {
       '-20': '-20 dB or higher',
@@ -2130,7 +2189,7 @@ function DXCCAnalyzer() {
     if (filterSnrRcvd !== 'all') filters.push(`RX SNR: ${activeFilterLabels.snr[filterSnrRcvd]}`)
     if (filterSnrSent !== 'all') filters.push(`TX SNR: ${activeFilterLabels.snr[filterSnrSent]}`)
 
-    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'Paper', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale', 'Wikipedia']
+    const headers = ['DXCC ID', 'Country', 'Prefix', 'Most Wanted Rank', 'Deleted', 'Continent', 'Total QSOs', ...BANDS, 'LOTW', 'eQSL', 'QRZ', 'QSL', 'Last QSO', 'Last QSO Band', 'Last QSO Call', 'Stale', 'Wikipedia']
     const rows = filteredData.map(([id, data]) => {
       const isStale = BANDS.some(band =>
         getDisplayBandStatus(data, band) === 'W' && isOlderThan5Years(data.bandLastQso?.[band])
@@ -2271,7 +2330,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.0</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.1</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
@@ -2818,7 +2877,8 @@ function DXCCAnalyzer() {
                 <option value="lotw">LOTW</option>
                 <option value="eqsl">eQSL</option>
                 <option value="qrz">QRZ</option>
-                <option value="qsl">Paper</option>
+                <option value="qsl">QSL</option>
+                <option value="lotwqsl">LOTW + QSL</option>
               </select>
               <select
                 value={filterBand}
@@ -3086,8 +3146,8 @@ function DXCCAnalyzer() {
                       </th>
                     )}
                     {visibleConfirm.includes('qsl') && (
-                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qsl')} title="Paper QSL">
-                        Paper {sortIndicator('qsl')}
+                      <th className="px-2 py-3 text-center cursor-pointer select-none hover:bg-gray-800 whitespace-nowrap" onClick={() => handleSort('qsl')} title="Paper QSL card">
+                        QSL {sortIndicator('qsl')}
                       </th>
                     )}
                   </tr>
@@ -3115,9 +3175,8 @@ function DXCCAnalyzer() {
                       {visibleBands.map(band => {
                         const status = getDisplayBandStatus(data, band)
                         const bandDate = data.bandLastQso?.[band]
-                        const bandCall = data.bandLastQsoCall?.[band]
                         const stale = status === 'W' && isOlderThan5Years(bandDate)
-                        const tooltip = bandDate ? `Last QSO: ${formatQsoDate(bandDate)}${bandCall ? ` (${bandCall})` : ''}${stale ? ' – no confirmation in 5+ years' : ''}` : undefined
+                        const tooltip = buildBandQsoTooltip(data.bandQsoList?.[band], stale, filterConfirmation)
                         return (
                           <td key={band} className={`px-2 py-3 text-center ${filterBand !== 'all' ? (band === filterBand ? 'bg-blue-900/30 border-x border-blue-500/50' : 'opacity-40') : ''}`}>
                             {status === 'C' && (

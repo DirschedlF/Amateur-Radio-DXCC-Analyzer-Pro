@@ -1,6 +1,6 @@
 # Amateur Radio DXCC Analyzer Pro - Elevator Pitch
 
-**Version 2.9.0** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
+**Version 2.9.1** | Built by Fritz DK9RC | [GitHub Repository](https://github.com/DirschedlF/Amateur-Radio-DXCC-Analyzer-Pro)
 
 ---
 
@@ -137,7 +137,7 @@
 ## Open Source & Community
 
 - **Free and Open Source** - MIT Licensed
-- **Active Development** - Version 2.9.0 released February 2026
+- **Active Development** - Version 2.9.1 released August 2026
 - **Community Driven** - Built by amateur radio operators, for amateur radio operators
 - **Well Documented** - Comprehensive README and developer guidance
 

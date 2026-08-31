@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.9.0) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.9.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -104,6 +104,7 @@ The application is architected as a **Single-File-Component** for maximum portab
 | `cont` | `CONT` | Direct (lookup table still takes priority) |
 | `qsodate` (ISO datetime) | `QSO_DATE` | `"2024-10-04 07:00:00Z"` → `"20241004"` |
 | `mode` | `MODE` | Direct |
+| `callsign` (or `call`) | `CALL` | Worked station's callsign |
 | `stationcallsign` | `STATION_CALLSIGN` | Direct |
 | `operator` | `OPERATOR` | Direct |
 | `qsoconfirmations` (JSON) | Multiple fields | Parse array; `{"CT":"LOTW","R":"Yes"}` → `LOTW_QSL_RCVD=Y` |
@@ -134,6 +135,7 @@ const CT_MAP = {
 | `COL_CONT` | `CONT` | Direct (lookup table still takes priority) |
 | `COL_QSO_DATE` (DATE) | `QSO_DATE` | `"2024-10-08"` → `"20241008"` (remove hyphens) |
 | `COL_MODE` | `MODE` | Direct |
+| `COL_CALL` | `CALL` | Direct (worked station's callsign) |
 | `COL_STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
 | `COL_OPERATOR` | `OPERATOR` | Direct |
 | `COL_LOTW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`V`/`N`) |
@@ -171,6 +173,7 @@ const CT_MAP = {
 | `QSO_Begin` (Date) | `QSO_DATE` | UTC date → `"YYYYMMDD"`; skip if year ≥ 3000 |
 | `Mode` | `MODE` | Direct |
 | `CONT` | `CONT` | Direct (lookup table still takes priority) |
+| `CALL` | `CALL` | Direct (worked station's callsign) |
 | `STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
 | `Operator` | `OPERATOR` | Direct |
 | `APP_DXKeeper_LotW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`R`/`N`) |
@@ -237,7 +240,7 @@ Filters are organized in two layers:
 - Search (country name or DXCC ID)
 - Status filter (All, Confirmed, Worked Only, Not Worked, All Entities)
 - Continent filter
-- Confirmation platform filter (LOTW, eQSL, QRZ, Paper)
+- Confirmation platform filter (LOTW, eQSL, QRZ, QSL, and the composite "LOTW + QSL")
 - Band filter
 
 ### Statistics Architecture
@@ -326,11 +329,12 @@ Three levels of statistics:
 - **Mode Filter**: SSB / CW / Digital / All (pre-analysis filter)
 - **Operator Filter**: Filter by STATION_CALLSIGN or OPERATOR (shown only when multiple callsigns present)
 - **Continent Filter**: Dynamic based on loaded data + lookup table
-- **Confirmation Platform Filter**: LOTW / eQSL / QRZ / Paper
+- **Confirmation Platform Filter**: LOTW / eQSL / QRZ / QSL (paper card) / **LOTW + QSL** — the last is a composite that matches an entity/band confirmed by LoTW **or** a paper QSL card (the two methods ARRL DXCC accepts). Implemented via `confirmMatches()`; `platformQsos.lotwqsl` / `bandPlatformQsos[band].lotwqsl` hold the deduped QSO counts.
 - **Band Filter**: Focus on a single band (160m-6m)
 - **Date Range Filter**: Presets (This Year, Last Year, Last 12 Months) + custom date range (pre-analysis filter)
 - **Active Filter Tags**: Visual chips with individual remove and "Reset All"
 - **Column Sorting**: All columns sortable, smart default direction (desc for bands/platforms/QSOs, asc for text)
+- **Band badge hover tooltip**: hovering a Worked/Confirmed band badge lists every QSO on that band (date + worked callsign + ✓), newest first, capped at 15 with "…and N more". The ✓ follows the confirmation-platform filter — under a platform filter it marks confirmation on that platform (or the "LOTW + QSL" composite), otherwise any platform. Data source: `bandQsoList` per entity/band, built in `analyzeQSOs()`; rendered by `buildBandQsoTooltip()`.
 - **Sticky Headers**: Keep band columns visible while scrolling
 - **Sticky Country Column**: Keep country names visible when scrolling horizontally
 - **Export to CSV**: RFC-4180 compliant export with filter info header (handles country names with commas)
@@ -351,7 +355,7 @@ Three levels of statistics:
 ### Visual Charts (Collapsible)
 - **DXCC by Continent**: Stacked bar chart (Confirmed vs Worked)
 - **Band Activity**: Stacked bar chart per band
-- **Confirmation Platforms**: Horizontal bar chart (LOTW, eQSL, QRZ, Paper)
+- **Confirmation Platforms**: Horizontal bar chart (LOTW, eQSL, QRZ, QSL)
 - **Band x Continent Heatmap**: Color-intensity grid
 - **DXCC World Map** *(NEW in v2.8.0)* - Interactive geographic visualization of all DXCC entities
   - Leaflet.js map with OpenStreetMap tiles (privacy-friendly)
@@ -383,7 +387,7 @@ Three levels of statistics:
 - Main container: `max-w-[1800px]` to accommodate all columns:
   - Text columns: Country, DXCC ID, Prefix, MW Rank, Continent, QSOs (6 columns)
   - Band columns: 160m-6m (11 columns)
-  - Confirmation columns: LOTW, eQSL, QRZ, Paper (4 columns)
+  - Confirmation columns: LOTW, eQSL, QRZ, QSL (4 columns)
   - **Total: 21 columns**
 - Band and confirmation columns use compact padding (`px-2`) to fit on screen
 - Prefix and MW Rank columns use medium padding (`px-3`)
@@ -557,7 +561,7 @@ const isConfirmed = (qso) => {
 
 - Test with various ADIF file sizes (100 QSOs, 1,000 QSOs, 100,000+ QSOs)
 - Test data in `.testdata/` directory (git-ignored)
-- Verify all confirmation platform fields (LOTW, eQSL, QRZ, Paper)
+- Verify all confirmation platform fields (LOTW, eQSL, QRZ, QSL) and the "LOTW + QSL" composite filter (union of LoTW and paper-QSL confirmations)
 - Test edge cases: missing DXCC field, malformed records, unusual band designations
 - Validate CSV export with filtered data; verify RFC-4180 escaping for country names with commas
 - Validate JSON export contains correct entity structure
