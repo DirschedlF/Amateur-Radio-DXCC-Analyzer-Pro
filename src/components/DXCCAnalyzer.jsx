@@ -2330,7 +2330,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.2</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.3</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
