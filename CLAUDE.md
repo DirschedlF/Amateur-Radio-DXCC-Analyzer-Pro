@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Amateur Radio DXCC Analyzer Pro** (v2.9.1) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
+**Amateur Radio DXCC Analyzer Pro** (v2.9.2) is a browser-based, client-side application for analyzing amateur radio logbooks in ADIF format, Log4OM SQLite databases, Ham Radio Deluxe (HRD) databases, and DXKeeper Access databases. It visualizes DXCC progress (Worked/Confirmed) across multiple bands and confirmation platforms without server-side data transmission (100% privacy-preserving).
 
 ## Technology Stack
 
@@ -173,7 +173,7 @@ const CT_MAP = {
 | `QSO_Begin` (Date) | `QSO_DATE` | UTC date → `"YYYYMMDD"`; skip if year ≥ 3000 |
 | `Mode` | `MODE` | Direct |
 | `CONT` | `CONT` | Direct (lookup table still takes priority) |
-| `CALL` | `CALL` | Direct (worked station's callsign) |
+| `Call` | `CALL` | Direct (worked station's callsign) |
 | `STATION_CALLSIGN` | `STATION_CALLSIGN` | Direct |
 | `Operator` | `OPERATOR` | Direct |
 | `APP_DXKeeper_LotW_QSL_RCVD` | `LOTW_QSL_RCVD` | Direct (`Y`/`R`/`N`) |

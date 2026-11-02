@@ -444,7 +444,7 @@ function DXCCAnalyzer() {
         CONT:            row['CONT']                                  || '',
         QSO_DATE:        qsoDate,
         MODE:            row['Mode']                                  || '',
-        CALL:            row['CALL']                                  || '',
+        CALL:            row['Call'] || row['CALL']                   || '',  // DXKeeper column is "Call"
         STATION_CALLSIGN: row['STATION_CALLSIGN']                    || '',
         OPERATOR:        row['Operator']                              || '',
         LOTW_QSL_RCVD:   row['APP_DXKeeper_LotW_QSL_RCVD']         || '',
@@ -2330,7 +2330,7 @@ function DXCCAnalyzer() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-center">DXCC Analyzer Pro</h1>
-        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.1</p>
+        <p className="text-gray-400 text-center">Amateur Radio Logbook Analysis Tool v2.9.2</p>
         {logData && fileName && (
           <>
             {/* Screen: Filename + Reload Button */}
