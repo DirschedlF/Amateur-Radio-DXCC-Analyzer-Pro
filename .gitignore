@@ -46,3 +46,6 @@ dist-standalone/
 # Test ADIF files (optional - remove if you want to track test files)
 *.adi
 *.adif
+
+# Playwright MCP logs/snapshots
+.playwright-mcp/
